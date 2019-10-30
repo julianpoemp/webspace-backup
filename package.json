@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "prestart": "tsc",
-    "start": "node dist/app.js",
+    "start": "cp src/config.json dist/config.json && node dist/app.js",
     "test": "node test.js",
     "build": "sh ./build.sh"
   },
@@ -27,6 +27,7 @@
     "archiver": "^3.1.1",
     "del": "^5.1.0",
     "fs-extra": "^8.1.0",
+    "ftp": "^0.3.10",
     "moment": "^2.24.0",
     "pkg": "^4.4.0",
     "rxjs": "^6.5.3"

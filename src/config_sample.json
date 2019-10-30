@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "server": {
+    "host": "example_address.com",
+    "port": "21",
+    "protocol": "ftp"
+  }
+}

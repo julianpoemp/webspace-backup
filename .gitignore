@@ -1,8 +1,7 @@
 /node_modules/
 /prod/
 /dist/
-/testfiles/
-/data/
+/src/config.json
 
 # Created by https://www.gitignore.io/api/macos,windows,intellij,phpstorm+all
 # Edit at https://www.gitignore.io/?templates=macos,windows,intellij,phpstorm+all
