@@ -1,6 +1,7 @@
 import {AppSettings} from '../AppSettings';
 import {FTPQueue} from './FTPQueue';
 import {FTPManager} from './FTPManager';
+import * as path from 'path';
 
 export class BackupManager {
 
@@ -29,13 +30,14 @@ export class BackupManager {
             this.ftpManager.getFolder(AppSettings.settings.backup.root).then((tree) => {
                 console.log(tree.toString());
 
-                console.log(`download...`);
-                this.ftpManager.downloadFolder(tree, AppSettings.appPath + '/').then(() => {
+                this.ftpManager.downloadFolder(tree, path.join(AppSettings.appPath, '')).then(() => {
                     console.log(`download ok to ${AppSettings.appPath}`);
-                    this.ftpManager.end();
+                    console.log(`!END!`);
+                    this.ftpManager.close();
                 }).catch((error) => {
                     console.log(error);
-                    this.ftpManager.end();
+                    console.log(`!END!`);
+                    this.ftpManager.close();
                 });
 
             }).catch((error) => {
@@ -43,7 +45,7 @@ export class BackupManager {
             });
         }).catch((error) => {
             console.log(`ERROR: ${error}`);
-            this.ftpManager.end();
+            this.ftpManager.close();
         });
     }
 }

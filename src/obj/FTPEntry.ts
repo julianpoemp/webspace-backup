@@ -1,43 +1,15 @@
-export interface IFTPEntry {
-    type: 'd' | '-' | 'l',
-    name: string,
-    target: any,
-    sticky: boolean,
-    rights: {
-        user: string,
-        group: string,
-        other: string
-    },
-    acl: boolean,
-    owner: string,
-    group: string,
-    size: number,
-    date: string
-}
+import {FileInfo} from 'basic-ftp';
 
-export class FTPEntry implements IFTPEntry {
+export class FTPEntry extends FileInfo {
     get path(): string {
         return this._path;
     }
 
-    type: 'd' | '-' | 'l';
-    name: string;
-    target: any;
-    sticky: boolean;
-    rights: {
-        user: string;
-        group: string;
-        other: string;
-    };
-    acl: boolean;
-    owner: string;
-    group: string;
-    size: number;
-    date: string;
-
     protected _path: string;
 
-    constructor(path: string, entry: IFTPEntry) {
+    constructor(path: string, entry: FileInfo) {
+        super(entry.name);
+
         for (let attr in entry) {
             if (entry.hasOwnProperty(attr)) {
                 this['' + attr] = entry['' + attr];
@@ -47,12 +19,12 @@ export class FTPEntry implements IFTPEntry {
     }
 
     public toString(level: number = 0) {
-        let result = '|';
+        let result = '';
         for (let i = 0; i < level; i++) {
-            result += '-';
+            result += ' ';
         }
 
-        result += `📄 ${this.name} (${this.size})`;
+        result += `|_ ${this.name} (${this.size})`;
 
         return result;
     }
@@ -81,7 +53,7 @@ export class FTPFolder extends FTPEntry {
 
     private _readable = true;
 
-    constructor(path: string, entry: IFTPEntry, parent: FTPFolder = null) {
+    constructor(path: string, entry: FileInfo, parent: FTPFolder = null) {
         super(path, entry);
         this.size = 0;
         this.parent = parent;
@@ -94,13 +66,13 @@ export class FTPFolder extends FTPEntry {
     }
 
     public toString(level: number = 0) {
-        let result = '|';
+        let result = '';
 
         for (let i = 0; i < level; i++) {
-            result += '-';
+            result += '';
         }
 
-        const icon = (this.readable) ? '📁 ' : '❌  ';
+        const icon = (this.readable) ? '|_ ' : 'X ';
         const size = getFileSize(this.size);
         result += `${icon}${this.name}/ (entries: ${this.length}, size: ${size.size} ${size.label})`;
 

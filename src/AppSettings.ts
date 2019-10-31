@@ -15,12 +15,12 @@ export class AppSettings {
 
     public static init(environment: 'development' | 'production') {
         if (environment === 'development') {
-            this._appPath = process.cwd() + '/dist';
+            this._appPath = path.join(process.cwd(), 'dist');
         } else {
             this._appPath = path.dirname(process.execPath);
         }
 
-        let settings = fs.readFileSync(this._appPath + '/config.json',
+        let settings = fs.readFileSync(path.join(this._appPath, 'config.json'),
             {
                 encoding: 'utf-8'
             }
