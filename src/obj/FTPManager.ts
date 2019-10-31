@@ -4,6 +4,7 @@ import * as Path from 'path';
 import * as fs from 'fs';
 import {FTPEntry, FTPFolder} from './FTPEntry';
 import {Subject} from 'rxjs';
+import moment = require('moment');
 
 export class FTPManager {
     private isReady = false;
@@ -11,14 +12,25 @@ export class FTPManager {
     private currentDirectory = '';
 
     public readyChange: Subject<boolean>;
+    public error: Subject<string>;
     private connectionOptions: FTPConnectionOptions;
+
+    public statistics = {
+        folders: 0,
+        files: 0,
+        started: 0,
+        ended: 0,
+        duration: 0
+    };
 
     constructor(path: string, options: FTPConnectionOptions) {
         this._client = new ftp.Client();
         this._client.ftp.verbose = false;
         this.readyChange = new Subject<boolean>();
+        this.error = new Subject<string>();
         this.currentDirectory = path;
         this.connectionOptions = options;
+
 
         this.connect().then(() => {
             this.isReady = true;
@@ -149,8 +161,9 @@ export class FTPManager {
                     }
                     p.then(() => {
                         result.sortEntries();
-                        console.log(`FINISHED ${path}`);
                         resolve(result);
+                    }).catch(() => {
+                        reject(result);
                     });
                 }
             }).catch((error) => {
@@ -182,7 +195,6 @@ export class FTPManager {
             if (!fs.existsSync(downloadPath)) {
                 fs.mkdirSync(downloadPath);
             }
-            downloadPath = Path.join(downloadPath);
 
             this.listEntries(remotePath).then((list) => {
                 const folders: FileInfo[] = [];
@@ -202,9 +214,14 @@ export class FTPManager {
 
                         for (const file of files) {
                             k = k.then(() => {
-                                const filePath = Path.join(remotePath, file.name);
-                                return this.downloadFile(filePath, downloadPath, file).catch((error) => {
-                                    console.log(error);
+                                const filePath = remotePath + file.name;
+                                return new Promise<void>((resolve3) => {
+                                    this.downloadFile(filePath, downloadPath, file).then(() => {
+                                        resolve3();
+                                    }).catch((error) => {
+                                        error.next(error);
+                                        resolve3();
+                                    });
                                 });
                             });
                         }
@@ -212,7 +229,7 @@ export class FTPManager {
                         k.then(() => {
                             resolve2();
                         }).catch((error) => {
-                            console.error(error);
+                            this.error.next(error);
                             resolve2();
                         });
                     } else {
@@ -224,23 +241,33 @@ export class FTPManager {
                         let p = Promise.resolve();
                         for (const folder1 of folders) {
                             p = p.then(() => {
-                                const folderPath = Path.join(remotePath, folder1.name);
-                                return this.downloadFolder(folderPath, Path.join(downloadPath, folder1.name)).catch((error) => {
-                                    console.log(error);
+                                const folderPath = remotePath + folder1.name + '/';
+                                return new Promise<void>((resolve3) => {
+                                    this.downloadFolder(folderPath, Path.join(downloadPath, folder1.name)).then(() => {
+                                        resolve3();
+                                    }).catch((error) => {
+                                        this.error.next(error);
+                                        resolve3();
+                                    });
                                 });
                             });
                         }
 
                         p.then(() => {
+                            this.statistics.folders++;
+                            console.log(`${moment().format('l LTS')} Directory downloaded: ${remotePath}\n`);
                             resolve();
                         }).catch((error) => {
                             reject(error);
                         });
                     } else {
+                        this.statistics.folders++;
+                        console.log(`${moment().format('l LTS')} Directory downloaded: ${remotePath}\n`);
                         resolve();
                     }
                 }).catch((error) => {
-                    console.error(error);
+                    this.error.next(error);
+                    resolve();
                 });
             }).catch((error) => {
                 reject(error);
@@ -253,7 +280,7 @@ export class FTPManager {
             if (fs.existsSync(downloadPath)) {
                 const handler = (info) => {
                     const procent = Math.round((info.bytes / fileInfo.size) * 10000) / 100;
-                    console.log(`${info.type} ${info.name}: ${procent}%`);
+                    console.log(`${moment().format('l LTS')}: ${info.type} ${info.name}: ${procent}%`);
                 };
                 new Promise<void>((resolve2, reject2) => {
                     if (this._client.closed) {
@@ -269,6 +296,7 @@ export class FTPManager {
                     this._client.trackProgress(handler);
                     this._client.downloadTo(Path.join(downloadPath, fileInfo.name), path).then(() => {
                         this._client.trackProgress(undefined);
+                        this.statistics.files++;
                         resolve();
                     }).catch((error) => {
                         reject(error);
