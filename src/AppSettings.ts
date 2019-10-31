@@ -2,6 +2,10 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 export class AppSettings {
+    static get appPath(): string {
+        return this._appPath;
+    }
+
     public static get settings(): Configuration {
         return this._settings;
     }
@@ -33,7 +37,8 @@ export interface Configuration {
         'host': string,
         'port': number,
         'user': string,
-        'password': string
+        'password': string,
+        'pasvTimeout': number
     },
     'backup': {
         'root': string

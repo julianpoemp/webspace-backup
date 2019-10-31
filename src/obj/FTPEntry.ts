@@ -59,23 +59,38 @@ export class FTPEntry implements IFTPEntry {
 }
 
 export class FTPFolder extends FTPEntry {
+    get readable(): boolean {
+        return this._readable;
+    }
+
+    set readable(value: boolean) {
+        this._readable = value;
+    }
+
+    get length(): number {
+        return this._length;
+    }
+
     get entries(): FTPEntry[] {
         return this._entries;
     }
 
     private _entries: FTPEntry[] = [];
+    private parent: FTPFolder;
+    private _length = 0;
 
-    constructor(path: string, entry: IFTPEntry) {
+    private _readable = true;
+
+    constructor(path: string, entry: IFTPEntry, parent: FTPFolder = null) {
         super(path, entry);
+        this.size = 0;
+        this.parent = parent;
     }
 
-    public addEntry(entry: IFTPEntry) {
-        let path = (entry.type === 'd') ? this._path + entry.name + '/' : this._path + entry.name;
-        if (entry.type === 'd') {
-            this._entries.push(new FTPFolder(path, entry));
-        } else if (entry.type === '-') {
-            this._entries.push(new FTPEntry(path, entry));
-        }
+    public addEntry(entry: FTPEntry) {
+        this._entries.push(entry);
+        this._length++;
+        this.size += entry.size;
     }
 
     public toString(level: number = 0) {
@@ -85,7 +100,9 @@ export class FTPFolder extends FTPEntry {
             result += '-';
         }
 
-        result += `📁 ${this.name}/`;
+        const icon = (this.readable) ? '📁 ' : '❌  ';
+        const size = getFileSize(this.size);
+        result += `${icon}${this.name}/ (entries: ${this.length}, size: ${size.size} ${size.label})`;
 
         for (let entry of this._entries) {
             result += `\n${entry.toString(level + 1)}`;
@@ -94,18 +111,47 @@ export class FTPFolder extends FTPEntry {
         return result;
     }
 
-    public get length(): number {
-        let result = 0;
-
-        for (let entry of this._entries) {
-            if (entry.type === 'd') {
-                // @ts-ignore
-                result += entry.length;
-            } else {
-                result += 1;
+    public sortEntries() {
+        this._entries.sort((a, b) => {
+            if (a.name <= b.name) {
+                return -1;
             }
-        }
-
-        return result;
+            return (a.name === b.name) ? 0 : 1;
+        });
     }
+}
+
+export interface FileSize {
+    size: number;
+    label: string;
+}
+
+export function getFileSize(bytes: number): FileSize {
+    const result: FileSize = {
+        size: 0,
+        label: ''
+    };
+
+    if ((bytes / 1000) < 1) {
+        // take bytes
+        result.size = bytes;
+        result.label = 'B';
+    } else if (bytes / (1000 * 1000) < 1) {
+        // take kilobytes
+        result.size = bytes / 1000;
+        result.label = 'KB';
+    } else if (bytes / (1000 * 1000 * 1000) < 1) {
+        // take megabyte
+        result.size = bytes / 1000 / 1000;
+        result.label = 'MB';
+    } else if (bytes / (1000 * 1000 * 1000 * 1000) < 1) {
+        // take gigabytes
+
+        result.size = bytes / 1000 / 1000 / 1000;
+        result.label = 'GB';
+    }
+
+    result.size = Math.round(result.size * 1000) / 1000;
+
+    return result;
 }

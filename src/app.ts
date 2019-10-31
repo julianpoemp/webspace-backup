@@ -11,6 +11,3 @@ console.log(JSON.stringify(AppSettings.settings.server));
 console.log(`Test...`);
 
 const backupManager = new BackupManager();
-backupManager.test();
-
-console.log('Backup finished! Quit!');
