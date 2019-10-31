@@ -173,80 +173,88 @@ export class FTPManager {
     }
 
     private trackingHandler = (info) => {
-        console.log('File: ' + info.name +  ", " + 'Transferred Overall: ' + info.bytesOverall);
+        console.log('File: ' + info.name + ', ' + 'Transferred Overall: ' + info.bytesOverall);
     };
 
-    public downloadFolder(folder: FTPFolder, downloadPath: string): Promise<void> {
+    public downloadFolder(remotePath: string, downloadPath: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             console.log(`download to ${downloadPath}`);
-            if (!fs.existsSync(Path.join(downloadPath, folder.name))) {
-                fs.mkdirSync(Path.join(downloadPath, folder.name));
+            if (!fs.existsSync(downloadPath)) {
+                fs.mkdirSync(downloadPath);
             }
-            downloadPath = Path.join(downloadPath, folder.name);
+            downloadPath = Path.join(downloadPath);
 
-            const folders: FTPFolder[] = [];
-            const files: FTPEntry[] = [];
-            for (const entry of folder.entries) {
-                if (entry instanceof FTPFolder) {
-                    folders.push(entry);
-                } else {
-                    files.push(entry);
-                }
-            }
+            this.listEntries(remotePath).then((list) => {
+                const folders: FileInfo[] = [];
+                const files: FileInfo[] = [];
 
-            new Promise<void>((resolve2) => {
-                if (files.length > 0) {
-                    let k = Promise.resolve();
-
-                    for (const file of files) {
-                        k = k.then(() => {
-                            return this.downloadFile(file.path, downloadPath, file.name).catch((error) => {
-                                console.log(error);
-                            });
-                        });
+                for (const fileInfo of list) {
+                    if (fileInfo.isDirectory) {
+                        folders.push(fileInfo);
+                    } else if (fileInfo.isFile) {
+                        files.push(fileInfo);
                     }
-
-                    k.then(() => {
-                        resolve2();
-                    }).catch((error) => {
-                        console.error(error);
-                        resolve2();
-                    });
-                } else {
-                    resolve2();
                 }
 
-            }).then(() => {
-                console.log(`DOWNLOAD FOLDERS`);
-                if (folders.length > 0) {
-                    let p = Promise.resolve();
-                    for (const folder1 of folders) {
-                        p = p.then(() => {
-                            return this.downloadFolder(folder1, downloadPath).catch((error) => {
-                                console.log(error);
+                new Promise<void>((resolve2) => {
+                    if (files.length > 0) {
+                        let k = Promise.resolve();
+
+                        for (const file of files) {
+                            k = k.then(() => {
+                                const filePath = Path.join(remotePath, file.name);
+                                return this.downloadFile(filePath, downloadPath, file).catch((error) => {
+                                    console.log(error);
+                                });
                             });
+                        }
+
+                        k.then(() => {
+                            resolve2();
+                        }).catch((error) => {
+                            console.error(error);
+                            resolve2();
                         });
+                    } else {
+                        resolve2();
                     }
 
-                    p.then(() => {
+                }).then(() => {
+                    if (folders.length > 0) {
+                        let p = Promise.resolve();
+                        for (const folder1 of folders) {
+                            p = p.then(() => {
+                                const folderPath = Path.join(remotePath, folder1.name);
+                                return this.downloadFolder(folderPath, Path.join(downloadPath, folder1.name)).catch((error) => {
+                                    console.log(error);
+                                });
+                            });
+                        }
+
+                        p.then(() => {
+                            resolve();
+                        }).catch((error) => {
+                            reject(error);
+                        });
+                    } else {
                         resolve();
-                    }).catch((error) => {
-                        reject(error);
-                    });
-                } else {
-                    resolve();
-                }
+                    }
+                }).catch((error) => {
+                    console.error(error);
+                });
             }).catch((error) => {
-                console.error(error);
+                reject(error);
             });
         });
     }
 
-    public downloadFile(path: string, downloadPath: string, fileName: string): Promise<void> {
+    public downloadFile(path: string, downloadPath: string, fileInfo: FileInfo): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             if (fs.existsSync(downloadPath)) {
-                console.log(`download file ${downloadPath}${fileName}`);
-
+                const handler = (info) => {
+                    const procent = Math.round((info.bytes / fileInfo.size) * 10000) / 100;
+                    console.log(`${info.type} ${info.name}: ${procent}%`);
+                };
                 new Promise<void>((resolve2, reject2) => {
                     if (this._client.closed) {
                         this.connect().then((result) => {
@@ -258,7 +266,9 @@ export class FTPManager {
                         resolve2();
                     }
                 }).then(() => {
-                    this._client.downloadTo(Path.join(downloadPath, fileName), path).then(() => {
+                    this._client.trackProgress(handler);
+                    this._client.downloadTo(Path.join(downloadPath, fileInfo.name), path).then(() => {
+                        this._client.trackProgress(undefined);
                         resolve();
                     }).catch((error) => {
                         reject(error);

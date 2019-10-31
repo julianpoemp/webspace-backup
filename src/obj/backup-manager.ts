@@ -26,25 +26,13 @@ export class BackupManager {
     }
 
     public test() {
-        this.ftpManager.gotTo(AppSettings.settings.backup.root).then(() => {
-            this.ftpManager.getFolder(AppSettings.settings.backup.root).then((tree) => {
-                console.log(tree.toString());
-
-                this.ftpManager.downloadFolder(tree, path.join(AppSettings.appPath, '')).then(() => {
-                    console.log(`download ok to ${AppSettings.appPath}`);
-                    console.log(`!END!`);
-                    this.ftpManager.close();
-                }).catch((error) => {
-                    console.log(error);
-                    console.log(`!END!`);
-                    this.ftpManager.close();
-                });
-
-            }).catch((error) => {
-                console.error(error);
-            });
+        this.ftpManager.downloadFolder(AppSettings.settings.backup.root, path.join(AppSettings.appPath, 'nwc')).then(() => {
+            console.log(`download ok to ${AppSettings.appPath}`);
+            console.log(`!END!`);
+            this.ftpManager.close();
         }).catch((error) => {
-            console.log(`ERROR: ${error}`);
+            console.log(error);
+            console.log(`!END!`);
             this.ftpManager.close();
         });
     }
