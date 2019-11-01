@@ -1,8 +1,14 @@
 {
   "version": "1.0.0",
   "server": {
-    "host": "example_address.com",
-    "port": "21",
+    "host": "example_host",
+    "user": "user",
+    "password": "password",
+    "port": 21,
     "protocol": "ftp"
+  },
+  "backup": {
+    "root": "/",
+    "downloadPath": ""
   }
 }
