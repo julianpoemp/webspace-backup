@@ -1,11 +1,11 @@
 {
   "name": "webspace-backup",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Easy backup script for webspaces",
   "main": "index.js",
   "scripts": {
     "prestart": "tsc",
-    "start": "cp src/config.json dist/config.json && node dist/app.js",
+    "start": "cp src/config.json dist/config.json && node dist/environments/app.dev.js",
     "test": "node test.js",
     "build": "sh ./build.sh"
   },
