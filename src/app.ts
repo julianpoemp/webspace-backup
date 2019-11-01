@@ -1,5 +1,5 @@
-import {AppSettings} from './AppSettings';
 import {BackupManager} from './obj/backup-manager';
+import {AppSettings} from './app-settings';
 
 console.log('Easy backup v1.0.0 started');
 console.log('Check configuration...');

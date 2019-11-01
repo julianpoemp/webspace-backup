@@ -2,11 +2,11 @@ import * as ftp from 'basic-ftp';
 import {FileInfo} from 'basic-ftp';
 import * as Path from 'path';
 import * as fs from 'fs';
-import {FTPEntry, FTPFolder} from './FTPEntry';
 import {Subject} from 'rxjs';
+import {FtpEntry, FTPFolder} from './ftp-entry';
 import moment = require('moment');
 
-export class FTPManager {
+export class FtpManager {
     private isReady = false;
     private _client: ftp.Client;
     private currentDirectory = '';
@@ -101,7 +101,7 @@ export class FTPManager {
                     reject(error);
                 });
             } else {
-                reject('FTPManager is not ready. list entries');
+                reject('FtpManager is not ready. list entries');
             }
         });
     }
@@ -134,7 +134,7 @@ export class FTPManager {
 
                 for (const entry of list) {
                     if (entry.isFile) {
-                        result.addEntry(new FTPEntry(path + entry.name, entry));
+                        result.addEntry(new FtpEntry(path + entry.name, entry));
                     } else if (entry.isDirectory) {
                         folders.push(new FTPFolder(path + entry.name + '/', entry));
                     }
@@ -191,7 +191,6 @@ export class FTPManager {
 
     public downloadFolder(remotePath: string, downloadPath: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            console.log(`download to ${downloadPath}`);
             if (!fs.existsSync(downloadPath)) {
                 fs.mkdirSync(downloadPath);
             }
@@ -255,14 +254,14 @@ export class FTPManager {
 
                         p.then(() => {
                             this.statistics.folders++;
-                            console.log(`${moment().format('l LTS')} Directory downloaded: ${remotePath}\n`);
+                            console.log(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
                             resolve();
                         }).catch((error) => {
                             reject(error);
                         });
                     } else {
                         this.statistics.folders++;
-                        console.log(`${moment().format('l LTS')} Directory downloaded: ${remotePath}\n`);
+                        console.log(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
                         resolve();
                     }
                 }).catch((error) => {
@@ -279,8 +278,19 @@ export class FTPManager {
         return new Promise<void>((resolve, reject) => {
             if (fs.existsSync(downloadPath)) {
                 const handler = (info) => {
-                    const procent = Math.round((info.bytes / fileInfo.size) * 10000) / 100;
-                    console.log(`${moment().format('l LTS')}: ${info.type} ${info.name}: ${procent}%`);
+                    let procent = Math.round((info.bytes / fileInfo.size) * 10000) / 100;
+                    if (isNaN(procent)) {
+                        procent = 0;
+                    }
+                    let procentStr = '';
+                    if (procent < 10) {
+                        procentStr = '__';
+                    } else if (procent < 100) {
+                        procentStr = '_';
+                    }
+                    procentStr += procent.toFixed(2);
+
+                    console.log(`${this.getCurrentTimeString()}---> ${info.type} (${procentStr}%): ${info.name}`);
                 };
                 new Promise<void>((resolve2, reject2) => {
                     if (this._client.closed) {
@@ -320,7 +330,49 @@ export class FTPManager {
             });
         });
     }
+
+
+    public getCurrentTimeString(): string {
+        const duration = Date.now() - this.statistics.started;
+        return moment().format('L LTS') + ' | Duration: ' + this.getTimeString(duration) + ' ';
+    }
+
+    public getTimeString(timespan: number) {
+        if (timespan < 0) {
+            timespan = 0;
+        }
+
+        let result = '';
+        const minutes: string = this.formatNumber(this.getMinutes(timespan), 2);
+        const seconds: string = this.formatNumber(this.getSeconds(timespan), 2);
+        const hours: string = this.formatNumber(this.getHours(timespan), 2);
+
+        result += hours + ':' + minutes + ':' + seconds;
+
+        return result;
+    }
+
+    private formatNumber = (num, length): string => {
+        let result = '' + num.toFixed(0);
+        while (result.length < length) {
+            result = '0' + result;
+        }
+        return result;
+    };
+
+    private getSeconds(timespan: number): number {
+        return Math.floor(timespan / 1000) % 60;
+    }
+
+    private getMinutes(timespan: number): number {
+        return Math.floor(timespan / 1000 / 60);
+    }
+
+    private getHours(timespan: number): number {
+        return Math.floor(timespan / 1000 / 60 / 60);
+    }
 }
+
 
 export interface FTPConnectionOptions {
     host: string;

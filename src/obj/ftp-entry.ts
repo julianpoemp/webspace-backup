@@ -1,6 +1,6 @@
 import {FileInfo} from 'basic-ftp';
 
-export class FTPEntry extends FileInfo {
+export class FtpEntry extends FileInfo {
     get path(): string {
         return this._path;
     }
@@ -30,7 +30,7 @@ export class FTPEntry extends FileInfo {
     }
 }
 
-export class FTPFolder extends FTPEntry {
+export class FTPFolder extends FtpEntry {
     get readable(): boolean {
         return this._readable;
     }
@@ -43,11 +43,11 @@ export class FTPFolder extends FTPEntry {
         return this._length;
     }
 
-    get entries(): FTPEntry[] {
+    get entries(): FtpEntry[] {
         return this._entries;
     }
 
-    private _entries: FTPEntry[] = [];
+    private _entries: FtpEntry[] = [];
     private parent: FTPFolder;
     private _length = 0;
 
@@ -59,7 +59,7 @@ export class FTPFolder extends FTPEntry {
         this.parent = parent;
     }
 
-    public addEntry(entry: FTPEntry) {
+    public addEntry(entry: FtpEntry) {
         this._entries.push(entry);
         this._length++;
         this.size += entry.size;

@@ -41,6 +41,7 @@ export interface Configuration {
         'pasvTimeout': number
     },
     'backup': {
-        'root': string
+        'root': string,
+        'downloadPath': string
     }
 }
