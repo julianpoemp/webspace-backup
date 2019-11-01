@@ -23,6 +23,8 @@ export class FtpManager {
         duration: 0
     };
 
+    private recursives = 0;
+
     constructor(path: string, options: FTPConnectionOptions) {
         this._client = new ftp.Client();
         this._client.ftp.verbose = false;
@@ -191,86 +193,97 @@ export class FtpManager {
 
     public downloadFolder(remotePath: string, downloadPath: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            if (!fs.existsSync(downloadPath)) {
-                fs.mkdirSync(downloadPath);
-            }
+            const doFunction = () => {
 
-            this.listEntries(remotePath).then((list) => {
-                const folders: FileInfo[] = [];
-                const files: FileInfo[] = [];
-
-                for (const fileInfo of list) {
-                    if (fileInfo.isDirectory) {
-                        folders.push(fileInfo);
-                    } else if (fileInfo.isFile) {
-                        files.push(fileInfo);
-                    }
+                if (!fs.existsSync(downloadPath)) {
+                    fs.mkdirSync(downloadPath);
                 }
 
-                new Promise<void>((resolve2) => {
-                    if (files.length > 0) {
-                        let k = Promise.resolve();
+                this.listEntries(remotePath).then((list) => {
+                    const folders: FileInfo[] = [];
+                    const files: FileInfo[] = [];
 
-                        for (const file of files) {
-                            k = k.then(() => {
-                                const filePath = remotePath + file.name;
-                                return new Promise<void>((resolve3) => {
-                                    this.downloadFile(filePath, downloadPath, file).then(() => {
-                                        resolve3();
-                                    }).catch((error) => {
-                                        error.next(error);
-                                        resolve3();
-                                    });
-                                });
-                            });
+                    for (const fileInfo of list) {
+                        if (fileInfo.isDirectory) {
+                            folders.push(fileInfo);
+                        } else if (fileInfo.isFile) {
+                            files.push(fileInfo);
                         }
-
-                        k.then(() => {
-                            resolve2();
-                        }).catch((error) => {
-                            this.error.next(error);
-                            resolve2();
-                        });
-                    } else {
-                        resolve2();
                     }
 
-                }).then(() => {
-                    if (folders.length > 0) {
-                        let p = Promise.resolve();
-                        for (const folder1 of folders) {
-                            p = p.then(() => {
-                                const folderPath = remotePath + folder1.name + '/';
-                                return new Promise<void>((resolve3) => {
-                                    this.downloadFolder(folderPath, Path.join(downloadPath, folder1.name)).then(() => {
-                                        resolve3();
-                                    }).catch((error) => {
-                                        this.error.next(error);
-                                        resolve3();
+                    new Promise<void>((resolve2) => {
+                        if (files.length > 0) {
+                            let k = Promise.resolve();
+
+                            for (const file of files) {
+                                k = k.then(() => {
+                                    const filePath = remotePath + file.name;
+                                    return new Promise<void>((resolve3) => {
+                                        this.downloadFile(filePath, downloadPath, file).then(() => {
+                                            resolve3();
+                                        }).catch((error) => {
+                                            error.next(error);
+                                            resolve3();
+                                        });
                                     });
                                 });
+                            }
+
+                            k.then(() => {
+                                resolve2();
+                            }).catch((error) => {
+                                this.error.next(error);
+                                resolve2();
                             });
+                        } else {
+                            resolve2();
                         }
 
-                        p.then(() => {
+                    }).then(() => {
+                        if (folders.length > 0) {
+                            let p = Promise.resolve();
+                            for (const folder1 of folders) {
+                                p = p.then(() => {
+                                    const folderPath = remotePath + folder1.name + '/';
+                                    return new Promise<void>((resolve3) => {
+                                        this.downloadFolder(folderPath, Path.join(downloadPath, folder1.name)).then(() => {
+                                            resolve3();
+                                        }).catch((error) => {
+                                            this.error.next(error);
+                                            resolve3();
+                                        });
+                                    });
+                                });
+                            }
+
+                            p.then(() => {
+                                this.statistics.folders++;
+                                console.log(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
+                                resolve();
+                            }).catch((error) => {
+                                reject(error);
+                            });
+                        } else {
                             this.statistics.folders++;
                             console.log(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
                             resolve();
-                        }).catch((error) => {
-                            reject(error);
-                        });
-                    } else {
-                        this.statistics.folders++;
-                        console.log(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
+                        }
+                    }).catch((error) => {
+                        this.error.next(error);
                         resolve();
-                    }
+                    });
                 }).catch((error) => {
-                    this.error.next(error);
-                    resolve();
+                    reject(error);
                 });
-            }).catch((error) => {
-                reject(error);
-            });
+            };
+
+            this.recursives++;
+            if ((this.recursives % 10) === 9) {
+                console.log(`WAIT!`);
+                setTimeout(doFunction, 1000);
+            } else {
+                doFunction();
+            }
         });
     }
 
