@@ -26,7 +26,22 @@ cp src/config_sample.json prod/webspace-backup-beta1-x64-win/config.json
 cp src/config_sample.json prod/webspace-backup-beta1-x64-linux/config.json
 cp src/config_sample.json prod/webspace-backup-beta1-x64-macos/config.json
 
-zip -r -X prod/webspace-backup-beta1-x64-win.zip prod/webspace-backup-beta1-x64-win
-zip -r -X prod/webspace-backup-beta1-x64-macos.zip prod/webspace-backup-beta1-x64-macos
-zip -r -X prod/webspace-backup-beta1-x64-linux.zip prod/webspace-backup-beta1-x64-linux
+cd prod
+
+cd webspace-backup-beta1-x64-win
+zip -r -X ../webspace-backup-beta1-x64-win.zip ./
+cd ..
+
+cd webspace-backup-beta1-x64-macos
+zip -r -X ../webspace-backup-beta1-x64-macos.zip ./
+cd ..
+
+cd webspace-backup-beta1-x64-linux
+zip -r -X ../webspace-backup-beta1-x64-linux.zip ./
+cd ..
+
+rm -rf webspace-backup-beta1-x64-linux
+rm -rf webspace-backup-beta1-x64-macos
+rm -rf webspace-backup-beta1-x64-win
+
 echo "Build finished"
