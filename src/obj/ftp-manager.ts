@@ -290,7 +290,7 @@ export class FtpManager {
     }
 
     private getMinutes(timespan: number): number {
-        return Math.floor(timespan / 1000 / 60);
+        return Math.floor(timespan / 1000 / 60) % 60;
     }
 
     private getHours(timespan: number): number {
