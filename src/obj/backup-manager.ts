@@ -62,10 +62,11 @@ export class BackupManager {
 
             const statistics = `Started: ${moment(this.ftpManager.statistics.started).format('L LTS')}
 Ended: ${moment(this.ftpManager.statistics.ended).format('L LTS')}
-Duration: ${this.ftpManager.statistics.duration} Minutes
+Duration: ${this.ftpManager.getTimeString(this.ftpManager.statistics.duration * 60 * 1000)} (H:m:s)
 
 Folders: ${this.ftpManager.statistics.folders}
-Files: ${this.ftpManager.statistics.files}`;
+Files: ${this.ftpManager.statistics.files}
+Errors: ${errors.split("\n").length - 1}`;
 
             console.log('\n' + statistics);
             fs.writeFileSync(path.join(AppSettings.appPath, 'statistics.txt'), statistics, {

@@ -74,7 +74,7 @@ export class FtpManager {
         this._client.close();
     }
 
-    public gotTo(path: string): Promise<void> {
+    public async gotTo(path: string) {
         return new Promise<void>((resolve, reject) => {
             if (this.isReady) {
                 console.log(`open ${path}`);
@@ -94,18 +94,12 @@ export class FtpManager {
         });
     }
 
-    public listEntries(path: string): Promise<FileInfo[]> {
-        return new Promise<FileInfo[]>((resolve, reject) => {
-            if (this.isReady) {
-                this._client.list(path).then((list) => {
-                    resolve(list);
-                }).catch((error) => {
-                    reject(error);
-                });
-            } else {
-                reject('FtpManager is not ready. list entries');
-            }
-        });
+    public async listEntries(path: string): Promise<FileInfo[]> {
+        if (this.isReady) {
+            return this._client.list(path);
+        } else {
+            throw new Error('FtpManager is not ready. list entries');
+        }
     }
 
     public afterManagerIsReady(): Promise<void> {
@@ -174,163 +168,82 @@ export class FtpManager {
         });
     }
 
-    public downloadFolder2(path: string, downloadPath: string): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            this._client.trackProgress(this.trackingHandler);
-            this._client.downloadToDir(downloadPath, path).then((result) => {
-                this._client.trackProgress(undefined);
-                resolve();
-            }).catch((error) => {
-                this._client.trackProgress(undefined);
-                console.error(error);
-            });
-        });
+    public async downloadFolder(remotePath: string, downloadPath: string) {
+        this.recursives++;
+        if ((this.recursives % 10) === 9) {
+            console.log(`% wait 2 seconds...%`);
+            await this.wait(2000);
+        }
+
+
+        if (!fs.existsSync(downloadPath)) {
+            fs.mkdirSync(downloadPath);
+        }
+
+        try {
+            const list = await this.listEntries(remotePath);
+            for (const fileInfo of list) {
+                if (fileInfo.isDirectory) {
+                    const folderPath = remotePath + fileInfo.name + '/';
+                    try {
+                        await this.downloadFolder(folderPath, Path.join(downloadPath, fileInfo.name));
+                        this.statistics.folders++;
+                        console.log(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
+                    } catch (e) {
+                        this.error.next(e);
+                    }
+                } else if (fileInfo.isFile) {
+                    try {
+                        const filePath = remotePath + fileInfo.name;
+                        await this.downloadFile(filePath, downloadPath, fileInfo);
+                    } catch (e) {
+                        this.error.next(e);
+                    }
+                }
+            }
+            console.log(`return!`);
+            return;
+        } catch (e) {
+            this.error.next(e);
+        }
     }
 
-    private trackingHandler = (info) => {
-        console.log('File: ' + info.name + ', ' + 'Transferred Overall: ' + info.bytesOverall);
-    };
-
-    public downloadFolder(remotePath: string, downloadPath: string): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            const doFunction = () => {
-
-                if (!fs.existsSync(downloadPath)) {
-                    fs.mkdirSync(downloadPath);
+    public async downloadFile(path: string, downloadPath: string, fileInfo: FileInfo) {
+        if (fs.existsSync(downloadPath)) {
+            const handler = (info) => {
+                let procent = Math.round((info.bytes / fileInfo.size) * 10000) / 100;
+                if (isNaN(procent)) {
+                    procent = 0;
                 }
+                let procentStr = '';
+                if (procent < 10) {
+                    procentStr = '__';
+                } else if (procent < 100) {
+                    procentStr = '_';
+                }
+                procentStr += procent.toFixed(2);
 
-                this.listEntries(remotePath).then((list) => {
-                    const folders: FileInfo[] = [];
-                    const files: FileInfo[] = [];
-
-                    for (const fileInfo of list) {
-                        if (fileInfo.isDirectory) {
-                            folders.push(fileInfo);
-                        } else if (fileInfo.isFile) {
-                            files.push(fileInfo);
-                        }
-                    }
-
-                    new Promise<void>((resolve2) => {
-                        if (files.length > 0) {
-                            let k = Promise.resolve();
-
-                            for (const file of files) {
-                                k = k.then(() => {
-                                    const filePath = remotePath + file.name;
-                                    return new Promise<void>((resolve3) => {
-                                        this.downloadFile(filePath, downloadPath, file).then(() => {
-                                            resolve3();
-                                        }).catch((error) => {
-                                            error.next(error);
-                                            resolve3();
-                                        });
-                                    });
-                                });
-                            }
-
-                            k.then(() => {
-                                resolve2();
-                            }).catch((error) => {
-                                this.error.next(error);
-                                resolve2();
-                            });
-                        } else {
-                            resolve2();
-                        }
-
-                    }).then(() => {
-                        if (folders.length > 0) {
-                            let p = Promise.resolve();
-                            for (const folder1 of folders) {
-                                p = p.then(() => {
-                                    const folderPath = remotePath + folder1.name + '/';
-                                    return new Promise<void>((resolve3) => {
-                                        this.downloadFolder(folderPath, Path.join(downloadPath, folder1.name)).then(() => {
-                                            resolve3();
-                                        }).catch((error) => {
-                                            this.error.next(error);
-                                            resolve3();
-                                        });
-                                    });
-                                });
-                            }
-
-                            p.then(() => {
-                                this.statistics.folders++;
-                                console.log(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
-                                resolve();
-                            }).catch((error) => {
-                                reject(error);
-                            });
-                        } else {
-                            this.statistics.folders++;
-                            console.log(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
-                            resolve();
-                        }
-                    }).catch((error) => {
-                        this.error.next(error);
-                        resolve();
-                    });
-                }).catch((error) => {
-                    reject(error);
-                });
+                console.log(`${this.getCurrentTimeString()}---> ${info.type} (${procentStr}%): ${info.name}`);
             };
 
-            this.recursives++;
-            if ((this.recursives % 10) === 9) {
-                console.log(`WAIT!`);
-                setTimeout(doFunction, 1000);
-            } else {
-                doFunction();
+            if (this._client.closed) {
+                try {
+                    await this.connect();
+                } catch (e) {
+                    throw new Error(e);
+                }
             }
-        });
-    }
-
-    public downloadFile(path: string, downloadPath: string, fileInfo: FileInfo): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            if (fs.existsSync(downloadPath)) {
-                const handler = (info) => {
-                    let procent = Math.round((info.bytes / fileInfo.size) * 10000) / 100;
-                    if (isNaN(procent)) {
-                        procent = 0;
-                    }
-                    let procentStr = '';
-                    if (procent < 10) {
-                        procentStr = '__';
-                    } else if (procent < 100) {
-                        procentStr = '_';
-                    }
-                    procentStr += procent.toFixed(2);
-
-                    console.log(`${this.getCurrentTimeString()}---> ${info.type} (${procentStr}%): ${info.name}`);
-                };
-                new Promise<void>((resolve2, reject2) => {
-                    if (this._client.closed) {
-                        this.connect().then((result) => {
-                            resolve2();
-                        }).catch((error) => {
-                            reject2(error);
-                        });
-                    } else {
-                        resolve2();
-                    }
-                }).then(() => {
-                    this._client.trackProgress(handler);
-                    this._client.downloadTo(Path.join(downloadPath, fileInfo.name), path).then(() => {
-                        this._client.trackProgress(undefined);
-                        this.statistics.files++;
-                        resolve();
-                    }).catch((error) => {
-                        reject(error);
-                    });
-                }).catch((error) => {
-                    reject(error);
-                });
-            } else {
-                reject('downloadPath does not exist');
+            this._client.trackProgress(handler);
+            try {
+                await this._client.downloadTo(Path.join(downloadPath, fileInfo.name), path);
+                this._client.trackProgress(undefined);
+                this.statistics.files++;
+            } catch (e) {
+                throw new Error(e);
             }
-        });
+        } else {
+            throw new Error('downloadPath does not exist');
+        }
     }
 
     public chmod(path: string, permission: string): Promise<void> {
@@ -383,6 +296,14 @@ export class FtpManager {
 
     private getHours(timespan: number): number {
         return Math.floor(timespan / 1000 / 60 / 60);
+    }
+
+    public async wait(time: number): Promise<void>{
+        return new Promise<void>((resolve) => {
+            setTimeout(() => {
+                resolve();
+            }, time);
+        });
     }
 }
 
