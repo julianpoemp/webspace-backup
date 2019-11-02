@@ -1,13 +1,13 @@
-# webspace-backup v1.0.0-beta1
+# webspace-backup v0.0.1
 Easy to use backup script for web-spaces via ftp or ftps. Compatible to windows, linux and macos systems.
 
 **This project is still in development**.
 
-### Why?
+## Why?
 Because I haven't found any good and easy-to-use backup scripts that fit my needs.
 
-### What is the target of this project
-The target is to provide an easy-to-use script for all operating systems that backups both data from webspace and SQL Databases altogether. That is what most people need.
+## What is the aim of this project?
+The aim is to provide an easy-to-use script for all operating systems that backups both data from webspace and SQL Databases altogether. That is what most people need.
 
 # Current features
 * download all files and folders from an remote directory.
