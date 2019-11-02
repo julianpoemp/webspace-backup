@@ -4,6 +4,7 @@ import * as Path from 'path';
 import * as fs from 'fs';
 import {Subject} from 'rxjs';
 import {FtpEntry, FTPFolder} from './ftp-entry';
+import {ConsoleOutput} from './ConsoleOutput';
 import moment = require('moment');
 
 export class FtpManager {
@@ -39,7 +40,7 @@ export class FtpManager {
             this.gotTo(path).then(() => {
                 this.onReady();
             }).catch((error) => {
-                console.log('ERROR: ' + error);
+                ConsoleOutput.error('ERROR: ' + error);
                 this.onConnectionFailed();
             });
         });
@@ -77,7 +78,7 @@ export class FtpManager {
     public async gotTo(path: string) {
         return new Promise<void>((resolve, reject) => {
             if (this.isReady) {
-                console.log(`open ${path}`);
+                ConsoleOutput.info(`open ${path}`);
                 this._client.cd(path).then(() => {
                     this._client.pwd().then((dir) => {
                         this.currentDirectory = dir;
@@ -148,7 +149,7 @@ export class FtpManager {
                                 newFolder.sortEntries();
                                 result.addEntry(newFolder);
                                 counter++;
-                                console.log(`${folder.path} added, ${counter}/${folders.length}`);
+                                ConsoleOutput.log(`${folder.path} added, ${counter}/${folders.length}`);
                             }).catch((error) => {
                                 folder.readable = false;
                                 result.addEntry(folder);
@@ -171,7 +172,7 @@ export class FtpManager {
     public async downloadFolder(remotePath: string, downloadPath: string) {
         this.recursives++;
         if ((this.recursives % 10) === 9) {
-            console.log(`% wait 2 seconds...%`);
+            ConsoleOutput.info(`wait 2 seconds...`);
             await this.wait(2000);
         }
 
@@ -188,7 +189,7 @@ export class FtpManager {
                     try {
                         await this.downloadFolder(folderPath, Path.join(downloadPath, fileInfo.name));
                         this.statistics.folders++;
-                        console.log(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
+                        ConsoleOutput.success(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
                     } catch (e) {
                         this.error.next(e);
                     }
@@ -201,7 +202,6 @@ export class FtpManager {
                     }
                 }
             }
-            console.log(`return!`);
             return;
         } catch (e) {
             this.error.next(e);
@@ -223,7 +223,7 @@ export class FtpManager {
                 }
                 procentStr += procent.toFixed(2);
 
-                console.log(`${this.getCurrentTimeString()}---> ${info.type} (${procentStr}%): ${info.name}`);
+                ConsoleOutput.log(`${this.getCurrentTimeString()}---> ${info.type} (${procentStr}%): ${info.name}`);
             };
 
             if (this._client.closed) {
@@ -256,7 +256,6 @@ export class FtpManager {
             });
         });
     }
-
 
     public getCurrentTimeString(): string {
         const duration = Date.now() - this.statistics.started;
@@ -298,7 +297,7 @@ export class FtpManager {
         return Math.floor(timespan / 1000 / 60 / 60);
     }
 
-    public async wait(time: number): Promise<void>{
+    public async wait(time: number): Promise<void> {
         return new Promise<void>((resolve) => {
             setTimeout(() => {
                 resolve();

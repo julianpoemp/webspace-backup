@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as osLocale from 'os-locale';
 import {FtpManager} from './ftp-manager';
 import {AppSettings} from '../app-settings';
+import {ConsoleOutput} from './ConsoleOutput';
 import moment = require('moment');
 
 export class BackupManager {
@@ -11,10 +12,10 @@ export class BackupManager {
 
     constructor() {
         osLocale().then((locale) => {
-            console.log(`locale is ${locale}`);
+            ConsoleOutput.info(`locale is ${locale}`);
             moment.locale(locale);
         }).catch((error) => {
-            console.error(error);
+            ConsoleOutput.error(error);
         });
 
         this.ftpManager = new FtpManager(AppSettings.settings.backup.root, {
@@ -28,7 +29,7 @@ export class BackupManager {
         this.ftpManager.afterManagerIsReady().then(() => {
             this.doBackup();
         }).catch((error) => {
-            console.log(error);
+            ConsoleOutput.error(error);
         });
     }
 
@@ -41,6 +42,7 @@ export class BackupManager {
             fs.unlinkSync(path.join(AppSettings.appPath, 'statistics.txt'));
         }
         const subscr = this.ftpManager.error.subscribe((message: string) => {
+            ConsoleOutput.error(`${moment().format('L LTS')}: ${message}`);
             const line = `${moment().format('L LTS')}:\t${message}\n`;
             errors += line;
             fs.appendFile(path.join(AppSettings.appPath, 'errors.log'), line, {
@@ -53,35 +55,34 @@ export class BackupManager {
         name = name.substring(name.lastIndexOf('/') + 1);
         const downloadPath = (AppSettings.settings.backup.downloadPath === '') ? AppSettings.appPath : AppSettings.settings.backup.downloadPath;
 
-        console.log(`Remote path: ${AppSettings.settings.backup.root}\nDownload path: ${downloadPath}\n`);
+        ConsoleOutput.info(`Remote path: ${AppSettings.settings.backup.root}\nDownload path: ${downloadPath}\n`);
 
         this.ftpManager.statistics.started = Date.now();
         this.ftpManager.downloadFolder(AppSettings.settings.backup.root, path.join(downloadPath, name)).then(() => {
             this.ftpManager.statistics.ended = Date.now();
             this.ftpManager.statistics.duration = (this.ftpManager.statistics.ended - this.ftpManager.statistics.started) / 1000 / 60;
 
-            const statistics = `Started: ${moment(this.ftpManager.statistics.started).format('L LTS')}
+            ConsoleOutput.success('Backup finished!');
+            const statistics = `\n-- Statistics: --
+Started: ${moment(this.ftpManager.statistics.started).format('L LTS')}
 Ended: ${moment(this.ftpManager.statistics.ended).format('L LTS')}
 Duration: ${this.ftpManager.getTimeString(this.ftpManager.statistics.duration * 60 * 1000)} (H:m:s)
 
 Folders: ${this.ftpManager.statistics.folders}
 Files: ${this.ftpManager.statistics.files}
-Errors: ${errors.split("\n").length - 1}`;
+Errors: ${errors.split('\n').length - 1}`;
 
-            console.log('\n' + statistics);
+            ConsoleOutput.log('\n' + statistics);
             fs.writeFileSync(path.join(AppSettings.appPath, 'statistics.txt'), statistics, {
                 encoding: 'utf-8'
             });
-
-            console.log(`download ok to ${AppSettings.appPath}`);
             if (errors !== '') {
-                console.log(`There are errors. Please read the errors.log file for further information.`);
+                ConsoleOutput.error(`There are errors. Please read the errors.log file for further information.`);
             }
             subscr.unsubscribe();
             this.ftpManager.close();
         }).catch((error) => {
-            console.log(error);
-            console.log(`!END!`);
+            ConsoleOutput.error(error);
             this.ftpManager.close();
         });
     }
