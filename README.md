@@ -40,7 +40,9 @@ The aim is to provide an easy-to-use script for all operating systems that backu
           "user": "user",
           "password": "password",
           "port": 21,
-          "protocol": "ftp" <- this setting is ignored at the moment. It's ftps by default.
+          "protocol": "ftps" <- (or "ftp"),
+          "verbose": false,
+          "timeout": 30 <- (unit: seconds)
         },
         "backup": {
           "root": "/", <- the path mus start end end with /.
