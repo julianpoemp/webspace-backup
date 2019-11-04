@@ -35,12 +35,13 @@ export class AppSettings {
 export interface Configuration {
     'version': string,
     'server': {
-        'protocol': 'ftp',
+        'protocol': 'ftp' | 'ftps',
         'host': string,
         'port': number,
         'user': string,
         'password': string,
-        'pasvTimeout': number
+        'timeout': number,
+        'verbose': boolean
     },
     'backup': {
         'root': string,

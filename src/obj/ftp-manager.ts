@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import {Subject} from 'rxjs';
 import {FtpEntry, FTPFolder} from './ftp-entry';
 import {ConsoleOutput} from './ConsoleOutput';
+import {Configuration} from '../app-settings';
 import moment = require('moment');
 
 export class FtpManager {
@@ -16,6 +17,8 @@ export class FtpManager {
     public error: Subject<string>;
     private connectionOptions: FTPConnectionOptions;
 
+    private protocol: 'ftp' | 'ftps' = 'ftps';
+
     public statistics = {
         folders: 0,
         files: 0,
@@ -26,13 +29,18 @@ export class FtpManager {
 
     private recursives = 0;
 
-    constructor(path: string, options: FTPConnectionOptions) {
-        this._client = new ftp.Client();
-        this._client.ftp.verbose = false;
+    constructor(path: string, configuration: Configuration) {
+        this._client = new ftp.Client(configuration.server.timeout * 1000);
+        this._client.ftp.verbose = configuration.server.verbose;
         this.readyChange = new Subject<boolean>();
         this.error = new Subject<string>();
-        this.connectionOptions = options;
-
+        this.connectionOptions = {
+            host: configuration.server.host,
+            port: configuration.server.port,
+            user: configuration.server.user,
+            password: configuration.server.password
+        };
+        this.protocol = configuration.server.protocol;
 
         this.connect().then(() => {
             this.isReady = true;
@@ -45,11 +53,12 @@ export class FtpManager {
 
     private async connect() {
         try {
+            ConsoleOutput.info(`connect via ${this.protocol}...`);
             await this._client.access({
                 host: this.connectionOptions.host,
                 user: this.connectionOptions.user,
                 password: this.connectionOptions.password,
-                secure: true
+                secure: (this.protocol === 'ftps')
             });
             return true;
         } catch (e) {
@@ -356,5 +365,4 @@ export interface FTPConnectionOptions {
     port: number;
     user: string;
     password: string;
-    pasvTimeout: number;
 }

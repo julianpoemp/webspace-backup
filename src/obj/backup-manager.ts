@@ -18,13 +18,7 @@ export class BackupManager {
             ConsoleOutput.error(error);
         });
 
-        this.ftpManager = new FtpManager(AppSettings.settings.backup.root, {
-            host: AppSettings.settings.server.host,
-            port: AppSettings.settings.server.port,
-            user: AppSettings.settings.server.user,
-            password: AppSettings.settings.server.password,
-            pasvTimeout: AppSettings.settings.server.pasvTimeout
-        });
+        this.ftpManager = new FtpManager(AppSettings.settings.backup.root, AppSettings.settings);
 
         this.ftpManager.afterManagerIsReady().then(() => {
             this.doBackup();

@@ -1,11 +1,13 @@
 {
   "version": "1.0.0",
   "server": {
-    "host": "example_host",
+    "host": "example.com",
     "user": "user",
     "password": "password",
     "port": 21,
-    "protocol": "ftp"
+    "protocol": "ftps",
+    "timeout": 30,
+    "verbose": false
   },
   "backup": {
     "root": "/",
