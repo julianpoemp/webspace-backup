@@ -46,7 +46,7 @@ export class BackupManager {
             const line = `${moment().format('L LTS')}:\t${message}\n`;
             errors += line;
             fs.appendFile(path.join(AppSettings.appPath, 'errors.log'), line, {
-                encoding: 'Utf8'
+                encoding: 'utf8'
             }, () => {
             });
         });

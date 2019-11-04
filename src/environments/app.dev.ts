@@ -1,5 +1,6 @@
 import {AppSettings} from '../app-settings';
 import {BackupManager} from '../obj/backup-manager';
+import {ConsoleOutput} from '../obj/ConsoleOutput';
 
 AppSettings.init('development');
 console.log(`webspace-backup v${AppSettings.version} started!`);
@@ -10,4 +11,8 @@ console.log(`\x1b[33m
 -----------------------
 \x1b[0m`);
 
-new BackupManager();
+try {
+    new BackupManager();
+} catch (e) {
+    ConsoleOutput.error(e);
+}

@@ -31,34 +31,30 @@ export class FtpManager {
         this._client.ftp.verbose = false;
         this.readyChange = new Subject<boolean>();
         this.error = new Subject<string>();
-        this.currentDirectory = path;
         this.connectionOptions = options;
 
 
         this.connect().then(() => {
             this.isReady = true;
-            this.gotTo(path).then(() => {
-                this.onReady();
-            }).catch((error) => {
-                ConsoleOutput.error('ERROR: ' + error);
-                this.onConnectionFailed();
-            });
+            this.onReady();
+        }).catch((e) => {
+            this.onConnectionFailed();
+            throw e;
         });
     }
 
-    private connect(): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            this._client.access({
+    private async connect() {
+        try {
+            await this._client.access({
                 host: this.connectionOptions.host,
                 user: this.connectionOptions.user,
                 password: this.connectionOptions.password,
                 secure: true
-            }).then(() => {
-                resolve();
-            }).catch((error) => {
-                reject(error);
             });
-        });
+            return true;
+        } catch (e) {
+            throw e;
+        }
     }
 
     private onReady = () => {
@@ -81,8 +77,13 @@ export class FtpManager {
                 ConsoleOutput.info(`open ${path}`);
                 this._client.cd(path).then(() => {
                     this._client.pwd().then((dir) => {
-                        this.currentDirectory = dir;
-                        resolve();
+                        console.log(`dir is: ${dir}, current:${this.currentDirectory}`);
+                        if (dir === this.currentDirectory) {
+                            reject(new Error('currentDirectory not changed!'));
+                        } else {
+                            this.currentDirectory = dir;
+                            resolve();
+                        }
                     }).catch((error) => {
                         reject(error);
                     });
@@ -90,14 +91,44 @@ export class FtpManager {
                     reject(error);
                 });
             } else {
-                reject(`FTPManager is not ready. gotTo ${path}`);
+                reject(new Error(`FTPManager is not ready. gotTo ${path}`));
+            }
+        });
+    }
+
+    public async goUp() {
+        return new Promise<void>((resolve, reject) => {
+            if (this.isReady) {
+                ConsoleOutput.info(`go up`);
+                this._client.cdup().then(() => {
+                    this._client.pwd().then((dir) => {
+                        console.log(`dir is: ${dir}, current:${this.currentDirectory}`);
+                        if (dir === this.currentDirectory) {
+                            reject(new Error('currentDirectory not changed!'));
+                        } else {
+                            this.currentDirectory = dir;
+                            resolve();
+                        }
+                    }).catch((error) => {
+                        reject(error);
+                    });
+                }).catch((error) => {
+                    reject(error);
+                });
+            } else {
+                reject(new Error(`FTPManager is not ready.`));
             }
         });
     }
 
     public async listEntries(path: string): Promise<FileInfo[]> {
         if (this.isReady) {
-            return this._client.list(path);
+            try {
+                await this.gotTo(path);
+                return this._client.list();
+            } catch (e) {
+                throw e;
+            }
         } else {
             throw new Error('FtpManager is not ready. list entries');
         }
@@ -171,44 +202,56 @@ export class FtpManager {
 
     public async downloadFolder(remotePath: string, downloadPath: string) {
         this.recursives++;
-        if ((this.recursives % 10) === 9) {
-            ConsoleOutput.info(`wait 2 seconds...`);
-            await this.wait(2000);
-        }
 
+        if (this.recursives % 100 === 99) {
+            ConsoleOutput.info('WAIT');
+            await this.wait(0);
+        }
 
         if (!fs.existsSync(downloadPath)) {
             fs.mkdirSync(downloadPath);
         }
 
+        let list: FileInfo[] = [];
         try {
-            const list = await this.listEntries(remotePath);
-            for (const fileInfo of list) {
-                if (fileInfo.isDirectory) {
-                    const folderPath = remotePath + fileInfo.name + '/';
-                    try {
-                        await this.downloadFolder(folderPath, Path.join(downloadPath, fileInfo.name));
-                        this.statistics.folders++;
-                        ConsoleOutput.success(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
-                    } catch (e) {
-                        this.error.next(e);
-                    }
-                } else if (fileInfo.isFile) {
-                    try {
-                        const filePath = remotePath + fileInfo.name;
-                        await this.downloadFile(filePath, downloadPath, fileInfo);
-                    } catch (e) {
-                        this.error.next(e);
-                    }
-                }
-            }
-            return;
+            console.log(`download folder ${remotePath}`);
+            list = await this.listEntries(remotePath);
         } catch (e) {
             this.error.next(e);
+            return true;
         }
+
+
+        for (const fileInfo of list) {
+            console.log(`name: ${fileInfo.name}`);
+            if (fileInfo.isDirectory) {
+                const folderPath = remotePath + fileInfo.name + '/';
+                try {
+                    await this.downloadFolder(folderPath, Path.join(downloadPath, fileInfo.name));
+                    this.statistics.folders++;
+                    ConsoleOutput.success(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
+                } catch (e) {
+                    this.error.next(e);
+                }
+            } else if (fileInfo.isFile) {
+                try {
+                    const filePath = remotePath + fileInfo.name;
+                    if (this.recursives % 100 === 99) {
+                        ConsoleOutput.info('WAIT');
+                        await this.wait(0);
+                    }
+                    await this.downloadFile(filePath, downloadPath, fileInfo);
+                } catch (e) {
+                    this.error.next(e);
+                }
+            }
+        }
+        await this.goUp();
+        return true;
     }
 
     public async downloadFile(path: string, downloadPath: string, fileInfo: FileInfo) {
+        this.recursives++;
         if (fs.existsSync(downloadPath)) {
             const handler = (info) => {
                 let procent = Math.round((info.bytes / fileInfo.size) * 10000) / 100;
@@ -235,9 +278,10 @@ export class FtpManager {
             }
             this._client.trackProgress(handler);
             try {
-                await this._client.downloadTo(Path.join(downloadPath, fileInfo.name), path);
+                await this._client.downloadTo(Path.join(downloadPath, fileInfo.name), fileInfo.name);
                 this._client.trackProgress(undefined);
                 this.statistics.files++;
+                return true;
             } catch (e) {
                 throw new Error(e);
             }
