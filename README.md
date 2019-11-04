@@ -1,4 +1,4 @@
-# webspace-backup v0.0.1
+# webspace-backup
 Easy to use backup script for web-spaces via ftp or ftps. Compatible to windows, linux and macos systems.
 
 **This project is still in development**.
