@@ -11,6 +11,13 @@
   },
   "backup": {
     "root": "/",
-    "downloadPath": ""
+    "downloadPath": "",
+    "zip": {
+      "enabled": false,
+      "password": ""
+    }
+  },
+  "console": {
+    "tty": false
   }
 }
