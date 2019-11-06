@@ -10,19 +10,18 @@ Because I haven't found any good and easy-to-use backup scripts that fit my need
 The aim is to provide an easy-to-use script for all operating systems that backups both data from webspace and SQL Databases altogether. That is what most people need.
 
 # Current features
-* download all files and folders from an remote directory.
-* log failed downloads to a log file. After the backup the failed downloads could be repeated manually.
-* readable outputs
+* download of all files and folders from a remote directory to a local directory
+* logging of failed downloads to a local file. After the backup the failed downloads could be repeated manually
+* user-friendly outputs to the console
 * text file with statistics like number of folders, number of files, start date, end date, duration of the backup
+* compression of the backup folder to an (password encrypted) zip file
 
 # Planed features
-* more logging
-* Input credentials at the start as an alternative to permanently store it to the config.json
-* compression of backups
-* configurable lifespan of backups
-* backup of SQL databases
+* input credentials at the start as an alternative to permanently store it to the config.json
 * SSH support
-
+* backup of SQL databases
+* configurable lifespan of backups
+* more logging
 
 # Usage
 1. download the release for your operating system.
@@ -34,21 +33,29 @@ The aim is to provide an easy-to-use script for all operating systems that backu
 
 ## Configuration
     {
-        "version": "1.0.0",
-        "server": {
-          "host": "example_host",
-          "user": "user",
-          "password": "password",
-          "port": 21,
-          "protocol": "ftps" <- (or "ftp"),
-          "verbose": false,
-          "timeout": 30 <- (unit: seconds)
-        },
-        "backup": {
-          "root": "/", <- the path mus start end end with /.
-          "downloadPath": "" <- let this empty to donwload next to the script.
+      "version": "1.0.0",
+      "server": {
+        "host": "example.com",
+        "user": "user",
+        "password": "password",
+        "port": 21,
+        "protocol": "ftps" | "ftp",
+        "timeout": 30,
+        "verbose": false
+      },
+      "backup": {
+        "root": "/",
+        "downloadPath": "",
+        "zip": {
+          "enabled": false,
+          "password": ""
         }
+      },
+      "console": {
+        "tty": false
+      }
     }
+
 
 # Development
 
