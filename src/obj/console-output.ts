@@ -17,7 +17,7 @@ export class ConsoleOutput {
             console.log("");
             this.lastWasLive = false;
         }
-        console.log(`\x1b[31m${message}\x1b[0m`);
+        console.error(`\x1b[31m${message}\x1b[0m`);
     }
 
     public static info(message: string) {
@@ -50,5 +50,41 @@ export class ConsoleOutput {
         readline.cursorTo(process.stdout, 0, null);
         process.stdout.write(message);
         ConsoleOutput.lastWasLive = true;
+    }
+
+
+    public static getTimeString(timespan: number) {
+        if (timespan < 0) {
+            timespan = 0;
+        }
+
+        let result = '';
+        const minutes: string = this.formatNumber(this.getMinutes(timespan), 2);
+        const seconds: string = this.formatNumber(this.getSeconds(timespan), 2);
+        const hours: string = this.formatNumber(this.getHours(timespan), 2);
+
+        result += hours + ':' + minutes + ':' + seconds;
+
+        return result;
+    }
+
+    private static formatNumber = (num, length): string => {
+        let result = '' + num.toFixed(0);
+        while (result.length < length) {
+            result = '0' + result;
+        }
+        return result;
+    };
+
+    private static getSeconds(timespan: number): number {
+        return Math.floor(timespan / 1000) % 60;
+    }
+
+    private static getMinutes(timespan: number): number {
+        return Math.floor(timespan / 1000 / 60) % 60;
+    }
+
+    private static getHours(timespan: number): number {
+        return Math.floor(timespan / 1000 / 60 / 60);
     }
 }

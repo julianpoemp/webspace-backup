@@ -4,9 +4,9 @@ import * as fs from 'fs';
 import * as osLocale from 'os-locale';
 import {FtpManager} from './ftp-manager';
 import {AppSettings} from '../app-settings';
-import {ConsoleOutput} from './ConsoleOutput';
 import * as Zipper from 'node-7z'
 import * as rimraf from 'rimraf';
+import {ConsoleOutput} from './console-output';
 import moment = require('moment');
 
 export class BackupManager {
@@ -30,20 +30,26 @@ export class BackupManager {
         });
     }
 
-    public doBackup() {
+    /**
+     * starts the backup procedure
+     */
+    public async doBackup() {
         let errors = '';
         let name = AppSettings.settings.backup.root.substring(0, AppSettings.settings.backup.root.lastIndexOf('/'));
         name = name.substring(name.lastIndexOf('/') + 1);
         const downloadPath = (AppSettings.settings.backup.downloadPath === '') ? AppSettings.appPath : AppSettings.settings.backup.downloadPath;
         const timeString = moment().format('YYYY-MM-DD_H-mm') + '_';
         const targetPath = path.join(downloadPath, timeString + name);
+        const errorFile = `${timeString}${name}_errors.log`;
+        const statisticsFile = `${timeString}${name}_statistics.txt`;
 
-        if (fs.existsSync(path.join(downloadPath, `${timeString}${name}_errors.log`))) {
-            fs.unlinkSync(path.join(downloadPath, `${timeString}${name}_errors.log`));
+        if (fs.existsSync(path.join(downloadPath, errorFile))) {
+            fs.unlinkSync(path.join(downloadPath, errorFile));
         }
-        if (fs.existsSync(path.join(downloadPath, `${timeString}${name}_statistics.txt`))) {
-            fs.unlinkSync(path.join(downloadPath, `${timeString}${name}_statistics.txt`));
+        if (fs.existsSync(path.join(downloadPath, statisticsFile))) {
+            fs.unlinkSync(path.join(downloadPath, statisticsFile));
         }
+
         const subscr = this.ftpManager.error.subscribe((message: string) => {
             ConsoleOutput.error(`${moment().format('L LTS')}: ${message}`);
             const line = `${moment().format('L LTS')}:\t${message}\n`;
@@ -65,7 +71,7 @@ export class BackupManager {
             const statistics = `\n-- Statistics: --
 Started: ${moment(this.ftpManager.statistics.started).format('L LTS')}
 Ended: ${moment(this.ftpManager.statistics.ended).format('L LTS')}
-Duration: ${this.ftpManager.getTimeString(this.ftpManager.statistics.duration * 60 * 1000)} (H:m:s)
+Duration: ${ConsoleOutput.getTimeString(this.ftpManager.statistics.duration * 60 * 1000)} (H:m:s)
 
 Folders: ${this.ftpManager.statistics.folders}
 Files: ${this.ftpManager.statistics.files}
@@ -75,12 +81,14 @@ Errors: ${errors.split('\n').length - 1}`;
             fs.writeFileSync(path.join(downloadPath, `${timeString}${name}_statistics.txt`), statistics, {
                 encoding: 'utf-8'
             });
+
             if (errors !== '') {
                 ConsoleOutput.error(`There are errors. Please read the errors.log file for further information.`);
             }
             subscr.unsubscribe();
             this.ftpManager.close();
 
+            // check zipping
             if (AppSettings.settings.backup.zip.enabled) {
                 console.log(`\nZip folder...`);
                 this.createZipFile(downloadPath, timeString + name, this.ftpManager.statistics.files,
@@ -99,7 +107,13 @@ Errors: ${errors.split('\n').length - 1}`;
         });
     }
 
-    /** create zip file for extension */
+    /**
+     * creates a zip archive
+     * @param path
+     * @param name
+     * @param numOfFiles
+     * @param password
+     */
     async createZipFile(path: string, name: string, numOfFiles: number, password: string) {
         return new Promise<boolean>((resolve, reject) => {
             const localPath = Path.join(path, name, '*');

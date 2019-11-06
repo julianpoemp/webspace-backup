@@ -3,9 +3,8 @@ import {FileInfo} from 'basic-ftp';
 import * as Path from 'path';
 import * as fs from 'fs-extra';
 import {Subject} from 'rxjs';
-import {FtpEntry, FTPFolder} from './ftp-entry';
-import {ConsoleOutput} from './ConsoleOutput';
 import {AppSettings, Configuration} from '../app-settings';
+import {ConsoleOutput} from './console-output';
 import moment = require('moment');
 
 export class FtpManager {
@@ -56,6 +55,9 @@ export class FtpManager {
         });
     }
 
+    /**
+     * connects via FTP or FTPS
+     */
     private async connect() {
         try {
             ConsoleOutput.info(`connect via ${this.protocol}...`);
@@ -71,20 +73,33 @@ export class FtpManager {
         }
     }
 
+    /**
+     * after the FTP manager was initialized
+     */
     private onReady = () => {
         this.isReady = true;
         this.readyChange.next(true);
     };
 
+    /** after the connection was failed
+     *
+     */
     private onConnectionFailed() {
         this.isReady = false;
         this.readyChange.next(false);
     }
 
+    /**
+     * closes the client
+     */
     public close() {
         this._client.close();
     }
 
+    /**
+     * opens a remote directory and changes the current directory
+     * @param path
+     */
     public async gotTo(path: string) {
         return new Promise<void>((resolve, reject) => {
             if (this.isReady) {
@@ -109,10 +124,12 @@ export class FtpManager {
         });
     }
 
+    /**
+     * changes the current folder to the parent folder
+     */
     public async goUp() {
         return new Promise<void>((resolve, reject) => {
             if (this.isReady) {
-                ConsoleOutput.info(`go up`);
                 this._client.cdup().then(() => {
                     this._client.pwd().then((dir) => {
                         if (dir === this.currentDirectory) {
@@ -133,6 +150,10 @@ export class FtpManager {
         });
     }
 
+    /**
+     * lists entries
+     * @param path
+     */
     public async listEntries(path: string): Promise<FileInfo[]> {
         if (this.isReady) {
             try {
@@ -146,6 +167,9 @@ export class FtpManager {
         }
     }
 
+    /**
+     * promise that is executed after the FTPManager is ready
+     */
     public afterManagerIsReady(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             if (this.isReady) {
@@ -163,7 +187,12 @@ export class FtpManager {
         });
     }
 
-    public getFolder(path: string): Promise<FTPFolder> {
+    /**
+     * returns the folder
+     * @deprecated
+     * @param path
+
+     public getFolder(path: string): Promise<FTPFolder> {
         return new Promise<FTPFolder>((resolve, reject) => {
             this.listEntries(path).then((list) => {
                 let name = path.substring(0, path.lastIndexOf('/'));
@@ -211,7 +240,13 @@ export class FtpManager {
             });
         });
     }
+     */
 
+    /**
+     * downloads a remote folder
+     * @param remotePath
+     * @param downloadPath
+     */
     public async downloadFolder(remotePath: string, downloadPath: string) {
         this.folderQueue.push({remotePath, downloadPath});
 
@@ -228,6 +263,12 @@ export class FtpManager {
         }
     }
 
+    /**
+     * private download method to download a folder
+     * @param remotePath
+     * @param downloadPath
+     * @private
+     */
     private async _downloadFolder(remotePath: string, downloadPath: string) {
         this.recursives++;
 
@@ -248,7 +289,6 @@ export class FtpManager {
             this.error.next(e);
             return true;
         }
-
 
         for (const fileInfo of list) {
             if (fileInfo.isDirectory) {
@@ -272,7 +312,11 @@ export class FtpManager {
         return true;
     }
 
-    private existsFolder(path: string) {
+    /**
+     * checks if the local folder exists
+     * @param path
+     */
+    private async existsFolder(path: string) {
         return new Promise<boolean>((resolve, reject) => {
             fs.stat(path, (err, stats) => {
                 if (err) {
@@ -284,6 +328,12 @@ export class FtpManager {
         });
     }
 
+    /**
+     * downloads a remote file
+     * @param path
+     * @param downloadPath
+     * @param fileInfo
+     */
     public async downloadFile(path: string, downloadPath: string, fileInfo: FileInfo) {
         this.recursives++;
 
@@ -334,57 +384,17 @@ export class FtpManager {
         }
     }
 
-    public chmod(path: string, permission: string): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            this._client.send(`SITE CHMOD ${permission} ${path}`).then(() => {
-                console.log(`changed chmod of ${path} to ${permission}`);
-                resolve();
-            }).catch((error) => {
-                reject(error);
-            });
-        });
-    }
-
+    /**
+     * returns a current time string for logging.
+     */
     public getCurrentTimeString(): string {
         const duration = Date.now() - this.statistics.started;
-        return moment().format('L LTS') + ' | Duration: ' + this.getTimeString(duration) + ' ';
+        return moment().format('L LTS') + ' | Duration: ' + ConsoleOutput.getTimeString(duration) + ' ';
     }
 
-    public getTimeString(timespan: number) {
-        if (timespan < 0) {
-            timespan = 0;
-        }
-
-        let result = '';
-        const minutes: string = this.formatNumber(this.getMinutes(timespan), 2);
-        const seconds: string = this.formatNumber(this.getSeconds(timespan), 2);
-        const hours: string = this.formatNumber(this.getHours(timespan), 2);
-
-        result += hours + ':' + minutes + ':' + seconds;
-
-        return result;
-    }
-
-    private formatNumber = (num, length): string => {
-        let result = '' + num.toFixed(0);
-        while (result.length < length) {
-            result = '0' + result;
-        }
-        return result;
-    };
-
-    private getSeconds(timespan: number): number {
-        return Math.floor(timespan / 1000) % 60;
-    }
-
-    private getMinutes(timespan: number): number {
-        return Math.floor(timespan / 1000 / 60) % 60;
-    }
-
-    private getHours(timespan: number): number {
-        return Math.floor(timespan / 1000 / 60 / 60);
-    }
-
+    /**
+     * waits a specific time before the next method is called asynchronously
+     */
     public async wait(time: number): Promise<void> {
         return new Promise<void>((resolve) => {
             setTimeout(() => {
