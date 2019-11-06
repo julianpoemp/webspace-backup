@@ -4,7 +4,7 @@ targets="node12-linux-x64,node12-macos-x64,node12-win-x64"
 #targets="node12-macos-x64"
 #targets="node12-linux-armv7"
 
-version="v0.0.3"
+version="v0.0.4"
 
 echo "prebuild..."
 npm run prestart
