@@ -235,7 +235,7 @@ export class FtpManager {
 
         if (!await this.existsFolder(downloadPath)) {
             console.log(`create folder`);
-            await fs.mkdir(downloadPath);
+            await fs.mkdir(downloadPath, {recursive: true});
         }
 
         let list: FileInfo[] = [];

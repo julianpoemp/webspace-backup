@@ -52,7 +52,7 @@ export class BackupManager {
         ConsoleOutput.info(`Remote path: ${AppSettings.settings.backup.root}\nDownload path: ${downloadPath}\n`);
 
         this.ftpManager.statistics.started = Date.now();
-        this.ftpManager.downloadFolder(AppSettings.settings.backup.root, path.join(downloadPath, name)).then(() => {
+        this.ftpManager.downloadFolder(AppSettings.settings.backup.root, downloadPath).then(() => {
             this.ftpManager.statistics.ended = Date.now();
             this.ftpManager.statistics.duration = (this.ftpManager.statistics.ended - this.ftpManager.statistics.started) / 1000 / 60;
 
