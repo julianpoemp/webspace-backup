@@ -1,7 +1,7 @@
 import * as ftp from 'basic-ftp';
 import {FileInfo} from 'basic-ftp';
 import * as Path from 'path';
-import * as fs from 'fs';
+import * as fs from 'fs-extra';
 import {Subject} from 'rxjs';
 import {FtpEntry, FTPFolder} from './ftp-entry';
 import {ConsoleOutput} from './ConsoleOutput';
@@ -16,6 +16,11 @@ export class FtpManager {
     public readyChange: Subject<boolean>;
     public error: Subject<string>;
     private connectionOptions: FTPConnectionOptions;
+
+    private folderQueue: {
+        remotePath: string,
+        downloadPath: string
+    }[] = [];
 
     private protocol: 'ftp' | 'ftps' = 'ftps';
 
@@ -210,6 +215,17 @@ export class FtpManager {
     }
 
     public async downloadFolder(remotePath: string, downloadPath: string) {
+        this.folderQueue.push({remotePath, downloadPath});
+
+        while (this.folderQueue.length > 0) {
+            const {remotePath, downloadPath} = this.folderQueue.shift();
+            await this._downloadFolder(remotePath, downloadPath);
+            this.statistics.folders++;
+            ConsoleOutput.success(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
+        }
+    }
+
+    private async _downloadFolder(remotePath: string, downloadPath: string) {
         this.recursives++;
 
         if (this.recursives % 100 === 99) {
@@ -217,13 +233,14 @@ export class FtpManager {
             await this.wait(0);
         }
 
-        if (!fs.existsSync(downloadPath)) {
-            fs.mkdirSync(downloadPath);
+        if (!await this.existsFolder(downloadPath)) {
+            console.log(`create folder`);
+            await fs.mkdir(downloadPath);
         }
 
         let list: FileInfo[] = [];
         try {
-            console.log(`download folder ${remotePath}`);
+            console.log(`-- download folder:\n${remotePath}\n--`);
             list = await this.listEntries(remotePath);
         } catch (e) {
             this.error.next(e);
@@ -232,23 +249,17 @@ export class FtpManager {
 
 
         for (const fileInfo of list) {
-            console.log(`name: ${fileInfo.name}`);
             if (fileInfo.isDirectory) {
                 const folderPath = remotePath + fileInfo.name + '/';
+                const targetPath = Path.join(downloadPath, fileInfo.name);
                 try {
-                    await this.downloadFolder(folderPath, Path.join(downloadPath, fileInfo.name));
-                    this.statistics.folders++;
-                    ConsoleOutput.success(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
+                    this.folderQueue.push({remotePath: folderPath, downloadPath: targetPath});
                 } catch (e) {
                     this.error.next(e);
                 }
             } else if (fileInfo.isFile) {
                 try {
                     const filePath = remotePath + fileInfo.name;
-                    if (this.recursives % 100 === 99) {
-                        ConsoleOutput.info('WAIT');
-                        await this.wait(0);
-                    }
                     await this.downloadFile(filePath, downloadPath, fileInfo);
                 } catch (e) {
                     this.error.next(e);
@@ -259,9 +270,27 @@ export class FtpManager {
         return true;
     }
 
+    private existsFolder(path: string) {
+        return new Promise<boolean>((resolve, reject) => {
+            fs.stat(path, (err, stats) => {
+                if (err) {
+                    resolve(false);
+                } else {
+                    resolve(true);
+                }
+            });
+        });
+    }
+
     public async downloadFile(path: string, downloadPath: string, fileInfo: FileInfo) {
         this.recursives++;
-        if (fs.existsSync(downloadPath)) {
+
+        if (this.recursives % 100 === 99) {
+            ConsoleOutput.info('WAIT');
+            await this.wait(0);
+        }
+
+        if (await this.existsFolder(downloadPath)) {
             const handler = (info) => {
                 let procent = Math.round((info.bytes / fileInfo.size) * 10000) / 100;
                 if (isNaN(procent)) {
