@@ -5,7 +5,7 @@ import * as fs from 'fs-extra';
 import {Subject} from 'rxjs';
 import {FtpEntry, FTPFolder} from './ftp-entry';
 import {ConsoleOutput} from './ConsoleOutput';
-import {Configuration} from '../app-settings';
+import {AppSettings, Configuration} from '../app-settings';
 import moment = require('moment');
 
 export class FtpManager {
@@ -91,7 +91,6 @@ export class FtpManager {
                 ConsoleOutput.info(`open ${path}`);
                 this._client.cd(path).then(() => {
                     this._client.pwd().then((dir) => {
-                        console.log(`dir is: ${dir}, current:${this.currentDirectory}`);
                         if (dir === this.currentDirectory) {
                             reject(new Error('currentDirectory not changed!'));
                         } else {
@@ -116,7 +115,6 @@ export class FtpManager {
                 ConsoleOutput.info(`go up`);
                 this._client.cdup().then(() => {
                     this._client.pwd().then((dir) => {
-                        console.log(`dir is: ${dir}, current:${this.currentDirectory}`);
                         if (dir === this.currentDirectory) {
                             reject(new Error('currentDirectory not changed!'));
                         } else {
@@ -219,9 +217,14 @@ export class FtpManager {
 
         while (this.folderQueue.length > 0) {
             const {remotePath, downloadPath} = this.folderQueue.shift();
-            await this._downloadFolder(remotePath, downloadPath);
-            this.statistics.folders++;
-            ConsoleOutput.success(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
+            try {
+                await this._downloadFolder(remotePath, downloadPath);
+                this.statistics.folders++;
+                ConsoleOutput.success(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
+            } catch (e) {
+                this.error.next(e);
+                ConsoleOutput.error(e);
+            }
         }
     }
 
@@ -234,13 +237,12 @@ export class FtpManager {
         }
 
         if (!await this.existsFolder(downloadPath)) {
-            console.log(`create folder`);
             await fs.mkdir(downloadPath, {recursive: true});
         }
 
         let list: FileInfo[] = [];
         try {
-            console.log(`-- download folder:\n${remotePath}\n--`);
+            console.log(`download folder: ${remotePath}`);
             list = await this.listEntries(remotePath);
         } catch (e) {
             this.error.next(e);
@@ -304,7 +306,11 @@ export class FtpManager {
                 }
                 procentStr += procent.toFixed(2);
 
-                ConsoleOutput.log(`${this.getCurrentTimeString()}---> ${info.type} (${procentStr}%): ${info.name}`);
+                if (AppSettings.settings.console.tty) {
+                    ConsoleOutput.logLive(`${this.getCurrentTimeString()}---> ${info.type} (${procentStr}%): ${info.name}`);
+                } else {
+                    ConsoleOutput.log(`${this.getCurrentTimeString()}---> ${info.type} (${procentStr}%): ${info.name}`);
+                }
             };
 
             if (this._client.closed) {

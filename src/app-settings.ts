@@ -45,6 +45,13 @@ export interface Configuration {
     },
     'backup': {
         'root': string,
-        'downloadPath': string
+        'downloadPath': string,
+        'zip': {
+            'enabled': boolean,
+            'password': string
+        }
+    },
+    'console': {
+        'tty': boolean
     }
 }

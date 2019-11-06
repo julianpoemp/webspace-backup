@@ -4,8 +4,8 @@
   "description": "Easy backup script for webspaces",
   "main": "index.js",
   "scripts": {
-    "prestart": "tsc",
-    "start": "cp src/config.json dist/config.json && node dist/environments/app.dev.js",
+    "prestart": "tsc && cp src/config.json dist/config.json",
+    "start": "node dist/environments/app.dev.js",
     "test": "node test.js",
     "build": "sh ./build.sh"
   },
@@ -29,8 +29,10 @@
     "del": "^5.1.0",
     "fs-extra": "^8.1.0",
     "moment": "^2.24.0",
+    "node-7z": "^2.0.3",
     "os-locale": "^4.0.0",
     "pkg": "^4.4.0",
+    "rimraf": "^3.0.0",
     "rxjs": "^6.5.3"
   },
   "devDependencies": {
