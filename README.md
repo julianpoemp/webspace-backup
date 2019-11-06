@@ -23,13 +23,24 @@ The aim is to provide an easy-to-use script for all operating systems that backu
 * configurable lifespan of backups
 * more logging
 
+# Requirements
+Because this project uses the <a href="https://www.npmjs.com/package/node-7z" target="_blank">node-7z</a> package it needs 7zip installed on your pc.
+That's why you should have the a 7-Zip executable (v16.02 or greater) available in your system:
+
+    * On Debian and Ubuntu install the p7zip-full package.
+    * On Mac OSX use Homebrew brew install p7zip
+    * On Windows get 7-Zip frome 7-Zip download page.
+    
+    By default the module calls the 7z binary, it should be available in your PATH.
+
 # Usage
-1. download the release for your operating system.
-2. unpack the zip folder.
-3. go to the unzipped folder and change the config.json. You need to set your credentials in order to use this script.
-3. on windows use cmd and go to the unzipped folder. On macOS or linux use the terminal.
-4. run `./webspace-backup`
-5. the backup starts. By default the errors.log and statistics.txt is saved next to the script. To cancel the backup do CTRL + C.
+1. make sure that your system fits the requirements.
+2. download the release for your operating system.
+3. unpack the zip folder.
+4. go to the unzipped folder and change the config.json. You need to set your credentials in order to use this script.
+5. on windows use cmd and go to the unzipped folder. On macOS or linux use the terminal.
+6. run `./webspace-backup`
+7. the backup starts. By default the errors.log and statistics.txt is saved next to the script. To cancel the backup do CTRL + C.
 
 ## Configuration
     {
