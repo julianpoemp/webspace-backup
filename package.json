@@ -25,7 +25,7 @@
   "homepage": "https://github.com/julianpoemp/webspace-backup#readme",
   "dependencies": {
     "archiver": "^3.1.1",
-    "basic-ftp": "^4.4.1",
+    "basic-ftp": "^4.5.1",
     "del": "^5.1.0",
     "fs-extra": "^8.1.0",
     "moment": "^2.24.0",
