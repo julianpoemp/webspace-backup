@@ -287,6 +287,14 @@ export class FtpManager {
         }
 
         let list: FileInfo[] = [];
+        if (this._client.closed) {
+            try {
+                console.log(`RECONNECT...`);
+                await this.connect();
+            } catch (e) {
+                throw new Error(e);
+            }
+        }
         try {
             console.log(`download folder ${remotePath} ...`);
             list = await this.listEntries(remotePath);
