@@ -22,9 +22,11 @@ export class BackupManager {
         });
 
         this.ftpManager = new FtpManager(AppSettings.settings.backup.root, AppSettings.settings);
+    }
 
+    public start() {
         this.ftpManager.afterManagerIsReady().then(() => {
-            this.doBackup();
+            this.doBackup()
         }).catch((error) => {
             ConsoleOutput.error(error);
         });
@@ -33,7 +35,7 @@ export class BackupManager {
     /**
      * starts the backup procedure
      */
-    public async doBackup() {
+    public doBackup() {
         let errors = '';
         let name = AppSettings.settings.backup.root.substring(0, AppSettings.settings.backup.root.lastIndexOf('/'));
         name = name.substring(name.lastIndexOf('/') + 1);
@@ -92,7 +94,7 @@ Errors: ${errors.split('\n').length - 1}`;
             if (AppSettings.settings.backup.zip.enabled) {
                 console.log(`\nZip folder...`);
                 this.createZipFile(downloadPath, timeString + name, this.ftpManager.statistics.files,
-                    AppSettings.settings.backup.zip.password).then((result) => {
+                    AppSettings.settings.backup.zip.password).then(() => {
                     ConsoleOutput.success('Zip file created!');
                     rimraf(targetPath, () => {
                         console.log('done');

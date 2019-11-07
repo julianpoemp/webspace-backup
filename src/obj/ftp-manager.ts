@@ -21,7 +21,7 @@ export class FtpManager {
         downloadPath: string
     }[] = [];
 
-    private protocol: 'ftp' | 'ftps' = 'ftps';
+    private readonly protocol: 'ftp' | 'ftps' = 'ftps';
 
     public statistics = {
         folders: 0,
@@ -158,7 +158,7 @@ export class FtpManager {
         if (this.isReady) {
             try {
                 await this.gotTo(path);
-                return this._client.list();
+                return await this._client.list();
             } catch (e) {
                 throw e;
             }
@@ -277,13 +277,18 @@ export class FtpManager {
             await this.wait(0);
         }
 
-        if (!await this.existsFolder(downloadPath)) {
-            await fs.mkdir(downloadPath, {recursive: true});
+        try {
+            if (!await this.existsFolder(downloadPath)) {
+                await fs.mkdir(downloadPath, {recursive: true});
+            }
+        } catch (e) {
+            this.error.next(e);
+            return true;
         }
 
         let list: FileInfo[] = [];
         try {
-            console.log(`download folder: ${remotePath}`);
+            console.log(`download folder ${remotePath} ...`);
             list = await this.listEntries(remotePath);
         } catch (e) {
             this.error.next(e);
@@ -308,8 +313,12 @@ export class FtpManager {
                 }
             }
         }
-        await this.goUp();
-        return true;
+        try {
+            await this.goUp();
+            return true;
+        } catch (e) {
+            throw e;
+        }
     }
 
     /**
@@ -317,8 +326,8 @@ export class FtpManager {
      * @param path
      */
     private async existsFolder(path: string) {
-        return new Promise<boolean>((resolve, reject) => {
-            fs.stat(path, (err, stats) => {
+        return new Promise<boolean>((resolve) => {
+            fs.stat(path, (err) => {
                 if (err) {
                     resolve(false);
                 } else {
@@ -342,29 +351,37 @@ export class FtpManager {
             await this.wait(0);
         }
 
-        if (await this.existsFolder(downloadPath)) {
+        let existsFolder = false;
+        try {
+            existsFolder = await this.existsFolder(downloadPath)
+        } catch (e) {
+            throw e;
+        }
+
+        if (existsFolder) {
             const handler = (info) => {
-                let procent = Math.round((info.bytes / fileInfo.size) * 10000) / 100;
-                if (isNaN(procent)) {
-                    procent = 0;
+                let percent = Math.round((info.bytes / fileInfo.size) * 10000) / 100;
+                if (isNaN(percent)) {
+                    percent = 0;
                 }
-                let procentStr = '';
-                if (procent < 10) {
-                    procentStr = '__';
-                } else if (procent < 100) {
-                    procentStr = '_';
+                let percentStr = '';
+                if (percent < 10) {
+                    percentStr = '__';
+                } else if (percent < 100) {
+                    percentStr = '_';
                 }
-                procentStr += procent.toFixed(2);
+                percentStr += percent.toFixed(2);
 
                 if (AppSettings.settings.console.tty) {
-                    ConsoleOutput.logLive(`${this.getCurrentTimeString()}---> ${info.type} (${procentStr}%): ${info.name}`);
+                    ConsoleOutput.logLive(`${this.getCurrentTimeString()}---> ${info.type} (${percentStr}%): ${info.name}`);
                 } else {
-                    ConsoleOutput.log(`${this.getCurrentTimeString()}---> ${info.type} (${procentStr}%): ${info.name}`);
+                    ConsoleOutput.log(`${this.getCurrentTimeString()}---> ${info.type} (${percentStr}%): ${info.name}`);
                 }
             };
 
             if (this._client.closed) {
                 try {
+                    console.log(`RECONNECT...`);
                     await this.connect();
                 } catch (e) {
                     throw new Error(e);
@@ -377,6 +394,7 @@ export class FtpManager {
                 this.statistics.files++;
                 return true;
             } catch (e) {
+                this._client.trackProgress(undefined);
                 throw new Error(e);
             }
         } else {

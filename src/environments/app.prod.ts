@@ -6,7 +6,8 @@ AppSettings.init('production');
 console.log(`webspace-backup v${AppSettings.version} started!`);
 
 try {
-    new BackupManager();
+    const backupManager = new BackupManager();
+    backupManager.start();
 } catch (e) {
     ConsoleOutput.error(e);
 }
