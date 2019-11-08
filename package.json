@@ -1,6 +1,6 @@
 {
   "name": "webspace-backup",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "Easy backup script for webspaces",
   "main": "index.js",
   "scripts": {

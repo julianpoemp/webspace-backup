@@ -14,7 +14,7 @@ export class AppSettings {
     private static _settings: Configuration;
     private static _appPath: string;
 
-    public static readonly version = '0.0.4';
+    public static readonly version = '0.1.0';
 
     public static init(environment: 'development' | 'production') {
         if (environment === 'development') {
