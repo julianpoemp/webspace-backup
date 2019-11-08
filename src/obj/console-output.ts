@@ -3,45 +3,53 @@ import * as process from 'process';
 
 export class ConsoleOutput {
     private static lastWasLive = false;
+    public static showColors = true;
 
     public static log(message: string) {
-        if(this.lastWasLive){
-            console.log("");
+        if (this.lastWasLive) {
+            console.log('');
             this.lastWasLive = false;
         }
         console.log(`${message}`);
     }
 
     public static error(message: string) {
-        if(this.lastWasLive){
-            console.log("");
+        if (this.lastWasLive) {
+            console.log('');
             this.lastWasLive = false;
         }
-        console.error(`${message}`);
+        const formattedStr = (ConsoleOutput.showColors) ? ConsoleOutput.format(message, 'error') : message;
+        console.error(formattedStr);
     }
 
     public static info(message: string) {
-        if(this.lastWasLive){
-            console.log("");
+        if (this.lastWasLive) {
+            console.log('');
             this.lastWasLive = false;
         }
-        console.log(`${message}`);
+
+        const formattedStr = (ConsoleOutput.showColors) ? ConsoleOutput.format(message, 'info') : message;
+        console.error(formattedStr);
     }
 
     public static success(message: string) {
-        if(this.lastWasLive){
-            console.log("");
+        if (this.lastWasLive) {
+            console.log('');
             this.lastWasLive = false;
         }
-        console.log(`${message}`);
+
+        const formattedStr = (ConsoleOutput.showColors) ? ConsoleOutput.format(message, 'success') : message;
+        console.error(formattedStr);
     }
 
     public static warning(message: string) {
-        if(this.lastWasLive){
-            console.log("");
+        if (this.lastWasLive) {
+            console.log('');
             this.lastWasLive = false;
         }
-        console.log(`${message}`);
+
+        const formattedStr = (ConsoleOutput.showColors) ? ConsoleOutput.format(message, 'warning') : message;
+        console.error(formattedStr);
     }
 
     public static logLive = (message: string) => {
@@ -50,6 +58,19 @@ export class ConsoleOutput {
         readline.cursorTo(process.stdout, 0, null);
         process.stdout.write(message);
         ConsoleOutput.lastWasLive = true;
+    };
+
+    public static format(message: string, type: 'error' | 'info' | 'success' | 'warning') {
+        switch (type) {
+            case 'info':
+                return `\x1b[34m${message}\x1b[0m`;
+            case 'warning':
+                return `\x1b[33m${message}\x1b[0m`;
+            case 'error':
+                return `\x1b[31m${message}\x1b[0m`;
+            case 'success':
+                return `\x1b[32m${message}\x1b[0m`;
+        }
     }
 
 

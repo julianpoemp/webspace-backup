@@ -18,6 +18,7 @@
     }
   },
   "console": {
-    "tty": false
+    "tty": false,
+    "showColors": false
   }
 }

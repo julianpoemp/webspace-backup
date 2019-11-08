@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import {ConsoleOutput} from './obj/console-output';
 
 export class AppSettings {
     static get appPath(): string {
@@ -29,6 +30,7 @@ export class AppSettings {
         );
 
         this._settings = JSON.parse(settings) as Configuration;
+        ConsoleOutput.showColors = this._settings.console.showColors;
     }
 }
 
@@ -52,6 +54,7 @@ export interface Configuration {
         }
     },
     'console': {
-        'tty': boolean
+        'tty': boolean,
+        'showColors': boolean
     }
 }
