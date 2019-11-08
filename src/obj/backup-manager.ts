@@ -42,25 +42,19 @@ export class BackupManager {
         const downloadPath = (AppSettings.settings.backup.downloadPath === '') ? AppSettings.appPath : AppSettings.settings.backup.downloadPath;
         const timeString = moment().format('YYYY-MM-DD_H-mm') + '_';
         const targetPath = path.join(downloadPath, timeString + name);
-        const errorFile = `${timeString}${name}_errors.log`;
         const statisticsFile = `${timeString}${name}_statistics.txt`;
-
+        const logsFile = `${timeString}${name}.log`;
+        const errorFile = `${timeString}${name}_errors.log`;
         if (fs.existsSync(path.join(downloadPath, errorFile))) {
             fs.unlinkSync(path.join(downloadPath, errorFile));
         }
+
         if (fs.existsSync(path.join(downloadPath, statisticsFile))) {
             fs.unlinkSync(path.join(downloadPath, statisticsFile));
         }
-
-        const subscr = this.ftpManager.error.subscribe((message: string) => {
-            ConsoleOutput.error(`${moment().format('L LTS')}: ${message}`);
-            const line = `${moment().format('L LTS')}:\t${message}\n`;
-            errors += line;
-            fs.appendFile(path.join(downloadPath, `${timeString}${name}_errors.log`), line, {
-                encoding: 'utf8'
-            }, () => {
-            });
-        });
+        if (fs.existsSync(path.join(downloadPath, logsFile))) {
+            fs.unlinkSync(path.join(downloadPath, logsFile));
+        }
 
         ConsoleOutput.info(`Remote path: ${AppSettings.settings.backup.root}\nDownload path: ${downloadPath}\n`);
 
@@ -69,7 +63,7 @@ export class BackupManager {
             this.ftpManager.statistics.ended = Date.now();
             this.ftpManager.statistics.duration = (this.ftpManager.statistics.ended - this.ftpManager.statistics.started) / 1000 / 60;
 
-            ConsoleOutput.success('Backup finished!');
+            this.ftpManager.logger.log('Backup finsihed', 'success');
             const statistics = `\n-- Statistics: --
 Started: ${moment(this.ftpManager.statistics.started).format('L LTS')}
 Ended: ${moment(this.ftpManager.statistics.ended).format('L LTS')}
@@ -77,35 +71,67 @@ Duration: ${ConsoleOutput.getTimeString(this.ftpManager.statistics.duration * 60
 
 Folders: ${this.ftpManager.statistics.folders}
 Files: ${this.ftpManager.statistics.files}
-Errors: ${errors.split('\n').length - 1}`;
+Errors: ${this.ftpManager.logger.errorLogs.length}`;
 
             ConsoleOutput.log('\n' + statistics);
             fs.writeFileSync(path.join(downloadPath, `${timeString}${name}_statistics.txt`), statistics, {
                 encoding: 'utf-8'
             });
 
-            if (errors !== '') {
-                ConsoleOutput.error(`There are errors. Please read the errors.log file for further information.`);
+            if (this.ftpManager.logger.errorLogs.length > 0) {
+                const warning = `There are errors. Please read the errors.log file for further information.`;
+                ConsoleOutput.error(warning);
+                this.ftpManager.logger.add(warning, 'warning');
             }
-            subscr.unsubscribe();
             this.ftpManager.close();
 
             // check zipping
             if (AppSettings.settings.backup.zip.enabled) {
-                console.log(`\nZip folder...`);
+                this.ftpManager.logger.log('\nZip folder...', 'info');
                 this.createZipFile(downloadPath, timeString + name, this.ftpManager.statistics.files,
                     AppSettings.settings.backup.zip.password).then(() => {
-                    ConsoleOutput.success('Zip file created!');
-                    rimraf(targetPath, () => {
-                        console.log('done');
-                    });
+                    this.ftpManager.logger.log('Zip file created!', 'success');
+                    this.writeErrorLogs(downloadPath, name, timeString);
+                    this.writeLogs(downloadPath, name, timeString);
+                    rimraf(targetPath, () => {});
                 }).catch((error) => {
                     ConsoleOutput.error(error);
+                    this.ftpManager.logger.add('Zipping failed!', 'error');
+                    this.writeErrorLogs(downloadPath, name, timeString);
+                    this.writeLogs(downloadPath, name, timeString);
                 });
+            } else {
+                this.writeErrorLogs(downloadPath, name, timeString);
+                this.writeLogs(downloadPath, name, timeString);
             }
         }).catch((error) => {
             ConsoleOutput.error(error);
             this.ftpManager.close();
+        });
+    }
+
+    private writeErrorLogs(downloadPath: string, name: string, timeString: string) {
+        const errorFile = `${timeString}${name}_errors.log`;
+        const errors = this.ftpManager.logger.errorLogs;
+
+        let fileContent = '';
+        for (const loggerEntry of errors) {
+            fileContent += `${loggerEntry.toString()}\n`;
+        }
+        fs.writeFileSync(path.join(downloadPath, errorFile), fileContent, {
+            encoding: 'utf8'
+        });
+    }
+
+    private writeLogs(downloadPath: string, name: string, timeString: string) {
+        const logFile = `${timeString}${name}.log`;
+
+        let fileContent = '';
+        for (const loggerEntry of this.ftpManager.logger.queue) {
+            fileContent += `${loggerEntry.toString()}\n`;
+        }
+        fs.writeFileSync(path.join(downloadPath, logFile), fileContent, {
+            encoding: 'utf8'
         });
     }
 

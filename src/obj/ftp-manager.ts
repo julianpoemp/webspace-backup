@@ -5,21 +5,27 @@ import * as fs from 'fs-extra';
 import {Subject} from 'rxjs';
 import {AppSettings, Configuration} from '../app-settings';
 import {ConsoleOutput} from './console-output';
+import {Logger} from './logger';
 import moment = require('moment');
 
 export class FtpManager {
+    get logger(): Logger {
+        return this._logger;
+    }
+
     private isReady = false;
     private _client: ftp.Client;
     private currentDirectory = '';
 
     public readyChange: Subject<boolean>;
-    public error: Subject<string>;
     private connectionOptions: FTPConnectionOptions;
 
     private folderQueue: {
         remotePath: string,
         downloadPath: string
     }[] = [];
+
+    private _logger: Logger = new Logger();
 
     private readonly protocol: 'ftp' | 'ftps' = 'ftps';
 
@@ -37,7 +43,6 @@ export class FtpManager {
         this._client = new ftp.Client(configuration.server.timeout * 1000);
         this._client.ftp.verbose = configuration.server.verbose;
         this.readyChange = new Subject<boolean>();
-        this.error = new Subject<string>();
         this.connectionOptions = {
             host: configuration.server.host,
             port: configuration.server.port,
@@ -60,7 +65,7 @@ export class FtpManager {
      */
     private async connect() {
         try {
-            ConsoleOutput.info(`connect via ${this.protocol}...`);
+            this.logger.log(`connect via ${this.protocol}...`, 'info');
             await this._client.access({
                 host: this.connectionOptions.host,
                 user: this.connectionOptions.user,
@@ -103,7 +108,7 @@ export class FtpManager {
     public async gotTo(path: string) {
         return new Promise<void>((resolve, reject) => {
             if (this.isReady) {
-                ConsoleOutput.info(`open ${path}`);
+                this.logger.log(`open ${path}`, 'info');
                 this._client.cd(path).then(() => {
                     this._client.pwd().then((dir) => {
                         if (dir === this.currentDirectory) {
@@ -255,10 +260,10 @@ export class FtpManager {
             try {
                 await this._downloadFolder(remotePath, downloadPath);
                 this.statistics.folders++;
-                ConsoleOutput.success(`${this.getCurrentTimeString()}===> Directory downloaded: ${remotePath}\n`);
+                this.logger.log(`directory downloaded: ${remotePath}\n`, 'success', remotePath);
             } catch (e) {
-                this.error.next(e);
-                ConsoleOutput.error(e);
+                this._logger.add(e.message, 'error', remotePath);
+                this.logger.log(e.toString(), 'error', remotePath);
             }
         }
     }
@@ -273,7 +278,7 @@ export class FtpManager {
         this.recursives++;
 
         if (this.recursives % 100 === 99) {
-            ConsoleOutput.info('WAIT');
+            this.logger.log('wait...', 'info');
             await this.wait(0);
         }
 
@@ -282,24 +287,24 @@ export class FtpManager {
                 await fs.mkdir(downloadPath, {recursive: true});
             }
         } catch (e) {
-            this.error.next(e);
+            this._logger.add(e.message, 'error', remotePath);
             return true;
         }
 
         let list: FileInfo[] = [];
         if (this._client.closed) {
             try {
-                console.log(`RECONNECT...`);
+                this.logger.log('RECONNECT...', 'warning');
                 await this.connect();
             } catch (e) {
                 throw new Error(e);
             }
         }
         try {
-            console.log(`download folder ${remotePath} ...`);
+            this.logger.log(`download folder ${remotePath} ...`, 'info');
             list = await this.listEntries(remotePath);
         } catch (e) {
-            this.error.next(e);
+            this._logger.add(e.message, 'error', remotePath);
             return true;
         }
 
@@ -307,17 +312,13 @@ export class FtpManager {
             if (fileInfo.isDirectory) {
                 const folderPath = remotePath + fileInfo.name + '/';
                 const targetPath = Path.join(downloadPath, fileInfo.name);
-                try {
-                    this.folderQueue.push({remotePath: folderPath, downloadPath: targetPath});
-                } catch (e) {
-                    this.error.next(e);
-                }
+                this.folderQueue.push({remotePath: folderPath, downloadPath: targetPath});
             } else if (fileInfo.isFile) {
+                const filePath = remotePath + fileInfo.name;
                 try {
-                    const filePath = remotePath + fileInfo.name;
                     await this.downloadFile(filePath, downloadPath, fileInfo);
                 } catch (e) {
-                    this.error.next(e);
+                    this._logger.add(e.message, 'error', filePath);
                 }
             }
         }
@@ -325,6 +326,7 @@ export class FtpManager {
             await this.goUp();
             return true;
         } catch (e) {
+            this._logger.add(e.message, 'error', remotePath);
             throw e;
         }
     }
@@ -355,7 +357,7 @@ export class FtpManager {
         this.recursives++;
 
         if (this.recursives % 100 === 99) {
-            ConsoleOutput.info('WAIT');
+            this.logger.log('wait..', 'info');
             await this.wait(0);
         }
 
@@ -381,15 +383,15 @@ export class FtpManager {
                 percentStr += percent.toFixed(2);
 
                 if (AppSettings.settings.console.tty) {
-                    ConsoleOutput.logLive(`${this.getCurrentTimeString()}---> ${info.type} (${percentStr}%): ${info.name}`);
+                    ConsoleOutput.logLive(`${this.getCurrentTimeString()} ---> ${info.type} (${percentStr}%): ${info.name}`);
                 } else {
-                    ConsoleOutput.log(`${this.getCurrentTimeString()}---> ${info.type} (${percentStr}%): ${info.name}`);
+                    ConsoleOutput.log(`${this.getCurrentTimeString()} ---> ${info.type} (${percentStr}%): ${info.name}`);
                 }
             };
 
             if (this._client.closed) {
                 try {
-                    console.log(`RECONNECT...`);
+                    this.logger.log('RECONNECT...', 'warning');
                     await this.connect();
                 } catch (e) {
                     throw new Error(e);
@@ -398,6 +400,7 @@ export class FtpManager {
             this._client.trackProgress(handler);
             try {
                 await this._client.downloadTo(Path.join(downloadPath, fileInfo.name), fileInfo.name);
+                this.logger.add(`downloaded file`, 'success', downloadPath);
                 this._client.trackProgress(undefined);
                 this.statistics.files++;
                 return true;
@@ -429,7 +432,6 @@ export class FtpManager {
         });
     }
 }
-
 
 export interface FTPConnectionOptions {
     host: string;
