@@ -11,8 +11,8 @@ The aim is to provide an easy-to-use script for all operating systems that backu
 
 # Current features
 * download of all files and folders from a remote directory to a local directory
-* logging of failed downloads to a local file. After the backup the failed downloads could be repeated manually
 * user-friendly outputs to the console
+* create log files next to the backup
 * text file with statistics like number of folders, number of files, start date, end date, duration of the backup
 * compression of the backup folder to an (password encrypted) zip file
 
@@ -21,7 +21,6 @@ The aim is to provide an easy-to-use script for all operating systems that backu
 * SSH support
 * backup of SQL databases
 * configurable lifespan of backups
-* more logging
 
 # Requirements
 Because this project uses the <a href="https://www.npmjs.com/package/node-7z" target="_blank">node-7z</a> package it needs 7zip installed on your pc.
