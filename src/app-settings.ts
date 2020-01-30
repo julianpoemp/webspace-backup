@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as prompt from 'prompt';
 import {ConsoleOutput} from './obj/console-output';
 
 export class AppSettings {
@@ -31,6 +32,37 @@ export class AppSettings {
 
         this._settings = JSON.parse(settings) as Configuration;
         ConsoleOutput.showColors = this._settings.console.showColors;
+    }
+
+    public static checkUserSettings(): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            const properties = [
+                {
+                    name: 'username'
+                },
+                {
+                    name: 'password',
+                    hidden: true
+                }
+            ];
+
+            if (this._settings.server.user !== "" && this._settings.server.password !== "") {
+                resolve();
+            } else {
+                prompt.start();
+
+                prompt.get(properties, (err, result) => {
+                    if (err) {
+                        reject(err);
+                        return 1;
+                    }
+
+                    this._settings.server.user = result.username;
+                    this._settings.server.password = result.password;
+                    resolve();
+                });
+            }
+        });
     }
 }
 

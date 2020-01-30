@@ -50,13 +50,18 @@ export class FtpManager {
             password: configuration.server.password
         };
         this.protocol = configuration.server.protocol;
+    }
 
-        this.connect().then(() => {
-            this.isReady = true;
-            this.onReady();
-        }).catch((e) => {
-            this.onConnectionFailed();
-            throw e;
+    public start(): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.connect().then(() => {
+                this.isReady = true;
+                this.onReady();
+                resolve();
+            }).catch((e) => {
+                this.onConnectionFailed(e);
+                reject(e);
+            });
         });
     }
 
@@ -89,9 +94,17 @@ export class FtpManager {
     /** after the connection was failed
      *
      */
-    private onConnectionFailed() {
+    private onConnectionFailed(error: { name: string, code: number }) {
         this.isReady = false;
         this.readyChange.next(false);
+
+        if (error.name === "FTPError") {
+            switch (error.code) {
+                case(530):
+                    ConsoleOutput.error("Invalid username or password");
+                    break;
+            }
+        }
     }
 
     /**

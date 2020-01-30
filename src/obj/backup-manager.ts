@@ -17,11 +17,20 @@ export class BackupManager {
         osLocale().then((locale) => {
             ConsoleOutput.info(`locale is ${locale}`);
             moment.locale(locale);
+
+            AppSettings.checkUserSettings().then(() => {
+                this.ftpManager = new FtpManager(AppSettings.settings.backup.root, AppSettings.settings);
+                this.ftpManager.start().then(() => {
+                    this.start();
+                }).catch(() => {
+                    this.ftpManager.close();
+                });
+            }).catch((error) => {
+                ConsoleOutput.error(error);
+            });
         }).catch((error) => {
             ConsoleOutput.error(error);
         });
-
-        this.ftpManager = new FtpManager(AppSettings.settings.backup.root, AppSettings.settings);
     }
 
     public start() {
@@ -36,7 +45,6 @@ export class BackupManager {
      * starts the backup procedure
      */
     public doBackup() {
-        let errors = '';
         let name = AppSettings.settings.backup.root.substring(0, AppSettings.settings.backup.root.lastIndexOf('/'));
         name = name.substring(name.lastIndexOf('/') + 1);
         const downloadPath = (AppSettings.settings.backup.downloadPath === '') ? AppSettings.appPath : AppSettings.settings.backup.downloadPath;
@@ -93,7 +101,8 @@ Errors: ${this.ftpManager.logger.errorLogs.length}`;
                     this.ftpManager.logger.log('Zip file created!', 'success');
                     this.writeErrorLogs(downloadPath, name, timeString);
                     this.writeLogs(downloadPath, name, timeString);
-                    rimraf(targetPath, () => {});
+                    rimraf(targetPath, () => {
+                    });
                 }).catch((error) => {
                     ConsoleOutput.error(error);
                     this.ftpManager.logger.add('Zipping failed!', 'error');
