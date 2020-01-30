@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-targets="node10-linux-x64,node10-macos-x64,node10-win-x64"
+targets="node12-linux-x64,node12-macos-x64,node12-win-x64"
 #targets="node12-macos-x64"
 #targets="node12-linux-armv7"
 
-version="v0.1.0"
+version="v0.1.1"
 
 echo "prebuild..."
 npm run prestart
