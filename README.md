@@ -15,9 +15,9 @@ The aim is to provide an easy-to-use script for all operating systems that backu
 * create log files next to the backup
 * text file with statistics like number of folders, number of files, start date, end date, duration of the backup
 * compression of the backup folder to an (password encrypted) zip file
+* input credentials at the start as an alternative to permanently store it to the config.json
 
 # Planned features
-* input credentials at the start as an alternative to permanently store it to the config.json
 * SSH support
 * backup of SQL databases
 * configurable lifespan of backups
