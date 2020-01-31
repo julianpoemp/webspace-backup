@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as Path from 'path';
 import * as fs from 'fs';
 import * as osLocale from 'os-locale';
-import {FtpManager} from './ftp-manager';
+import {FtpManager} from './managers/ftp-manager';
 import {AppSettings} from '../app-settings';
 import * as Zipper from 'node-7z'
 import * as rimraf from 'rimraf';

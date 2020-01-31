@@ -2,73 +2,20 @@ import * as ftp from 'basic-ftp';
 import {FileInfo} from 'basic-ftp';
 import * as Path from 'path';
 import * as fs from 'fs-extra';
-import {Subject} from 'rxjs';
-import {AppSettings, Configuration} from '../app-settings';
-import {ConsoleOutput} from './console-output';
-import {Logger} from './logger';
-import moment = require('moment');
+import {AppSettings, Configuration} from '../../app-settings';
+import {ConsoleOutput} from '../console-output';
+import {ConnectionManager} from "./connection-manager";
 
-export class FtpManager {
-    get logger(): Logger {
-        return this._logger;
-    }
-
-    private isReady = false;
+export class FtpManager extends ConnectionManager {
     private _client: ftp.Client;
-    private currentDirectory = '';
-
-    public readyChange: Subject<boolean>;
-    private connectionOptions: FTPConnectionOptions;
-
-    private folderQueue: {
-        remotePath: string,
-        downloadPath: string
-    }[] = [];
-
-    private _logger: Logger = new Logger();
-
-    private readonly protocol: 'ftp' | 'ftps' = 'ftps';
-
-    public statistics = {
-        folders: 0,
-        files: 0,
-        started: 0,
-        ended: 0,
-        duration: 0
-    };
-
-    private recursives = 0;
 
     constructor(path: string, configuration: Configuration) {
+        super(path, configuration);
         this._client = new ftp.Client(configuration.server.timeout * 1000);
         this._client.ftp.verbose = configuration.server.verbose;
-        this.readyChange = new Subject<boolean>();
-        this.connectionOptions = {
-            host: configuration.server.host,
-            port: configuration.server.port,
-            user: configuration.server.user,
-            password: configuration.server.password
-        };
-        this.protocol = configuration.server.protocol;
     }
 
-    public start(): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            this.connect().then(() => {
-                this.isReady = true;
-                this.onReady();
-                resolve();
-            }).catch((e) => {
-                this.onConnectionFailed(e);
-                reject(e);
-            });
-        });
-    }
-
-    /**
-     * connects via FTP or FTPS
-     */
-    private async connect() {
+    protected async connect() {
         try {
             this.logger.log(`connect via ${this.protocol}...`, 'info');
             await this._client.access({
@@ -83,21 +30,7 @@ export class FtpManager {
         }
     }
 
-    /**
-     * after the FTP manager was initialized
-     */
-    private onReady = () => {
-        this.isReady = true;
-        this.readyChange.next(true);
-    };
-
-    /** after the connection was failed
-     *
-     */
-    private onConnectionFailed(error: { name: string, code: number }) {
-        this.isReady = false;
-        this.readyChange.next(false);
-
+    protected onConnectionFailed(error: { name: string, code: number }) {
         if (error.name === "FTPError") {
             switch (error.code) {
                 case(530):
@@ -107,17 +40,10 @@ export class FtpManager {
         }
     }
 
-    /**
-     * closes the client
-     */
     public close() {
         this._client.close();
     }
 
-    /**
-     * opens a remote directory and changes the current directory
-     * @param path
-     */
     public async gotTo(path: string) {
         return new Promise<void>((resolve, reject) => {
             if (this.isReady) {
@@ -142,9 +68,6 @@ export class FtpManager {
         });
     }
 
-    /**
-     * changes the current folder to the parent folder
-     */
     public async goUp() {
         return new Promise<void>((resolve, reject) => {
             if (this.isReady) {
@@ -168,10 +91,6 @@ export class FtpManager {
         });
     }
 
-    /**
-     * lists entries
-     * @param path
-     */
     public async listEntries(path: string): Promise<FileInfo[]> {
         if (this.isReady) {
             try {
@@ -183,26 +102,6 @@ export class FtpManager {
         } else {
             throw new Error('FtpManager is not ready. list entries');
         }
-    }
-
-    /**
-     * promise that is executed after the FTPManager is ready
-     */
-    public afterManagerIsReady(): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            if (this.isReady) {
-                resolve();
-            } else {
-                this.readyChange.subscribe(() => {
-                        resolve();
-                    },
-                    (error) => {
-                        reject(error);
-                    },
-                    () => {
-                    });
-            }
-        });
     }
 
     /**
@@ -260,11 +159,6 @@ export class FtpManager {
     }
      */
 
-    /**
-     * downloads a remote folder
-     * @param remotePath
-     * @param downloadPath
-     */
     public async downloadFolder(remotePath: string, downloadPath: string) {
         this.folderQueue.push({remotePath, downloadPath});
 
@@ -281,13 +175,7 @@ export class FtpManager {
         }
     }
 
-    /**
-     * private download method to download a folder
-     * @param remotePath
-     * @param downloadPath
-     * @private
-     */
-    private async _downloadFolder(remotePath: string, downloadPath: string) {
+    protected async _downloadFolder(remotePath: string, downloadPath: string) {
         this.recursives++;
 
         if (this.recursives % 100 === 99) {
@@ -344,11 +232,7 @@ export class FtpManager {
         }
     }
 
-    /**
-     * checks if the local folder exists
-     * @param path
-     */
-    private async existsFolder(path: string) {
+    protected async existsFolder(path: string) {
         return new Promise<boolean>((resolve) => {
             fs.stat(path, (err) => {
                 if (err) {
@@ -360,12 +244,6 @@ export class FtpManager {
         });
     }
 
-    /**
-     * downloads a remote file
-     * @param path
-     * @param downloadPath
-     * @param fileInfo
-     */
     public async downloadFile(path: string, downloadPath: string, fileInfo: FileInfo) {
         this.recursives++;
 
@@ -425,30 +303,4 @@ export class FtpManager {
             throw new Error('downloadPath does not exist');
         }
     }
-
-    /**
-     * returns a current time string for logging.
-     */
-    public getCurrentTimeString(): string {
-        const duration = Date.now() - this.statistics.started;
-        return moment().format('L LTS') + ' | Duration: ' + ConsoleOutput.getTimeString(duration) + ' ';
-    }
-
-    /**
-     * waits a specific time before the next method is called asynchronously
-     */
-    public async wait(time: number): Promise<void> {
-        return new Promise<void>((resolve) => {
-            setTimeout(() => {
-                resolve();
-            }, time);
-        });
-    }
-}
-
-export interface FTPConnectionOptions {
-    host: string;
-    port: number;
-    user: string;
-    password: string;
 }
