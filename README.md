@@ -1,10 +1,10 @@
 # webspace-backup
-Easy to use backup script for web-spaces via ftp or ftps. Compatible to windows, linux and macos systems.
+Easy to use backup script for web-spaces via ftp or ftps. Compatible to Windows, Linux and MacOS systems.
 
 **This project is still in development**.
 
 ## Why?
-Because I haven't found any good and easy-to-use backup scripts that fit my needs.
+Because I haven't found any good and easy-to-use backup scripts that fits my needs.
 
 ## What is the aim of this project?
 The aim is to provide an easy-to-use script for all operating systems that backups both data from webspace and SQL Databases altogether. That is what most people need.
@@ -62,7 +62,8 @@ That's why you should have the a 7-Zip executable (v16.02 or greater) available 
         }
       },
       "console": {
-        "tty": false
+        "tty": false,
+        "showColors": false
       }
     }
 
@@ -72,7 +73,9 @@ That's why you should have the a 7-Zip executable (v16.02 or greater) available 
 ## Installation
 1. Clone this repository.
 2. In the terminal go to `webspace-backup` folder
-3. run npm install (nodejs must be installed)
+3. Run npm install (nodejs must be installed)
+4. Duplicate ``config_sample.json`` and rename it to ``config.json``
+5. Change the config.json so that you can connect to your webspace and test the functionality.
 
 ## run development build
 
