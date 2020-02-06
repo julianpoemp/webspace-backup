@@ -1,4 +1,4 @@
-<h1 align="center">webspace-backup</span>
+<h1 align="center">webspace-backup</h1>
 
 <p align="center">
    Easy to use backup script for web-spaces via ftp or ftps. Compatible to Windows, Linux and MacOS systems.<br/>
