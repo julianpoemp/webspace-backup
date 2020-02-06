@@ -75,7 +75,8 @@ export interface Configuration {
         'user': string,
         'password': string,
         'timeout': number,
-        'verbose': boolean
+        'verbose': boolean,
+        'privateKey': string
     },
     'backup': {
         'root': string,

@@ -1,27 +1,33 @@
-import * as ftp from 'basic-ftp';
-import * as Path from 'path';
+import * as Path from "path";
+import * as node_ssh from "node-ssh";
 import * as fs from 'fs-extra';
+
 import {AppSettings, Configuration} from '../../app-settings';
 import {ConsoleOutput} from '../console-output';
-import {ConnectionManager, FileInfo} from './connection-manager';
+import {ConnectionManager, ConnectionOptions, FileInfo} from "./connection-manager";
+import {SSH} from "../ssh";
 
-export class FtpManager extends ConnectionManager {
-    private _client: ftp.Client;
+export class SftpManager {
+    private _client: SSH;
 
     constructor(path: string, configuration: Configuration) {
-        super(path, configuration);
-        this._client = new ftp.Client(configuration.server.timeout * 1000);
-        this._client.ftp.verbose = configuration.server.verbose;
+        // super(path, configuration);
+
+        // noinspection JSPotentiallyInvalidConstructorUsage
+        this._client = new node_ssh();
+
+        // this._client.ftp.verbose = configuration.server.verbose;
     }
 
+    /*
     protected async connect() {
         try {
             this.logger.log(`connect via ${this.protocol}...`, 'info');
-            await this._client.access({
+            await this._client.connect({
                 host: this.connectionOptions.host,
-                user: this.connectionOptions.user,
+                username: this.connectionOptions.user,
                 password: this.connectionOptions.password,
-                secure: (this.protocol === 'ftps')
+                privateKey: this.connectionOptions.privateKey
             });
             return true;
         } catch (e) {
@@ -29,22 +35,9 @@ export class FtpManager extends ConnectionManager {
         }
     }
 
-    protected onConnectionFailed(error: { name: string, code: number | string }) {
-        if (error.name === 'FTPError') {
-            switch (error.code) {
-                case(530):
-                    ConsoleOutput.error('Invalid username or password');
-                    break;
-                default:
-                    ConsoleOutput.error(`Error (${error.code}): ${error}`);
-            }
-        } else {
-            switch (error.code) {
-                case('ENOTFOUND'):
-                    ConsoleOutput.error(`Host not found: ${this.connectionOptions.host}`);
-                    break;
-            }
-        }
+    protected onConnectionFailed(error: any) {
+        console.log("ERROR!");
+        console.log(error);
     }
 
     public close() {
@@ -165,7 +158,7 @@ export class FtpManager extends ConnectionManager {
         });
     }
      */
-
+/*
     public async downloadFolder(remotePath: string, downloadPath: string) {
         this.folderQueue.push({remotePath, downloadPath});
 
@@ -310,4 +303,5 @@ export class FtpManager extends ConnectionManager {
             throw new Error('downloadPath does not exist');
         }
     }
+    */
 }

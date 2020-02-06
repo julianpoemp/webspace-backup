@@ -2,7 +2,6 @@ import {Configuration} from "../../app-settings";
 import {Subject} from "rxjs";
 import {Logger} from "../logger";
 import {ConsoleOutput} from "../console-output";
-import {FileInfo} from "basic-ftp";
 import moment = require("moment");
 
 export abstract class ConnectionManager {
@@ -176,4 +175,12 @@ export interface ConnectionOptions {
     port: number;
     user: string;
     password: string;
+    privateKey?: string;
+}
+
+export interface FileInfo {
+    name: string;
+    isDirectory: boolean;
+    isFile: boolean;
+    size: number;
 }

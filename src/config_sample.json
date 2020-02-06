@@ -19,6 +19,6 @@
   },
   "console": {
     "tty": false,
-    "showColors": false
+    "showColors": true
   }
 }
