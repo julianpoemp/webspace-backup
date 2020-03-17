@@ -158,8 +158,6 @@ Errors: ${this.ftpManager.logger.errorLogs.length}`;
     async createZipFile(path: string, name: string, numOfFiles: number, password: string) {
         return new Promise<boolean>((resolve, reject) => {
             const localPath = Path.join(path, name);
-            let numOfZipped = 0;
-            let lastFile = '';
 
             const output = fs.createWriteStream(localPath + ".zip");
             const archive = archiver('zip-encryptable', {
@@ -183,7 +181,6 @@ Errors: ${this.ftpManager.logger.errorLogs.length}`;
                 }
             });
 
-            console.log(`set pw ${password}`);
             // good practice to catch this error explicitly
             archive.on('error', function (err) {
                 reject(err);
@@ -192,7 +189,6 @@ Errors: ${this.ftpManager.logger.errorLogs.length}`;
             // pipe archive data to the file
             archive.pipe(output);
 
-            console.log(`zip folder ${localPath}`);
             archive.directory(localPath, '');
             archive.finalize();
         });
