@@ -1,12 +1,10 @@
-# webspace-backup
+<h1 align="center">webspace-backup</h1>
 
-<div style="text-align: center">
-<img src="doc/img/webspace_backup.gif" />
-</div>
-
-Easy to use backup script for web-spaces via ftp or ftps. Compatible to Windows, Linux and MacOS systems.
-
-**This project is still in development**.
+<p align="center">
+   Easy to use backup script for web-spaces via ftp or ftps. Compatible to Windows, Linux and MacOS systems.<br/>
+   <b>This project is still in development</b>
+   <img src="doc/img/webspace_backup.gif"/>
+</p>
 
 ## Why?
 Because I haven't found any good and easy-to-use backup script that fits my needs.
