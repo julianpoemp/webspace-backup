@@ -25,11 +25,11 @@
   "homepage": "https://github.com/julianpoemp/webspace-backup#readme",
   "dependencies": {
     "archiver": "^3.1.1",
+    "archiver-zip-encryptable": "^1.0.6",
     "basic-ftp": "^4.5.3",
     "del": "^5.1.0",
     "fs-extra": "^8.1.0",
     "moment": "^2.24.0",
-    "node-7z": "^2.0.5",
     "node-ssh": "^7.0.0",
     "os-locale": "^4.0.0",
     "pkg": "^4.4.2",

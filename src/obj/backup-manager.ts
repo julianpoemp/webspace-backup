@@ -4,7 +4,8 @@ import * as fs from 'fs';
 import * as osLocale from 'os-locale';
 import {FtpManager} from './managers/ftp-manager';
 import {AppSettings} from '../app-settings';
-import * as Zipper from 'node-7z'
+import * as archiver from 'archiver';
+import * as zipext from 'archiver-zip-encryptable';
 import * as rimraf from 'rimraf';
 import {ConsoleOutput} from './console-output';
 import moment = require('moment');
@@ -14,6 +15,9 @@ export class BackupManager {
     private ftpManager: FtpManager;
 
     constructor() {
+        console.log(`register zipext...`);
+        archiver.registerFormat('zip-encryptable', zipext);
+
         osLocale().then((locale) => {
             ConsoleOutput.info(`locale is ${locale}`);
             moment.locale(locale);
@@ -153,28 +157,44 @@ Errors: ${this.ftpManager.logger.errorLogs.length}`;
      */
     async createZipFile(path: string, name: string, numOfFiles: number, password: string) {
         return new Promise<boolean>((resolve, reject) => {
-            const localPath = Path.join(path, name, '*');
+            const localPath = Path.join(path, name);
             let numOfZipped = 0;
             let lastFile = '';
-            Zipper.add(Path.join(path, name) + `.zip`, localPath, {
-                recursive: true,
+
+            const output = fs.createWriteStream(localPath + ".zip");
+            const archive = archiver('zip-encryptable', {
+                zlib: {level: 9}, // Sets the compression level.
+                forceLocalTime: true,
                 password
-            }).on('end', () => {
+            });
+
+            output.on('finish', function () {
                 resolve(true);
-            }).on('error', (e) => {
-                reject(e);
-            }).on('data', (data) => {
-                if (lastFile !== data.file) {
-                    numOfZipped++;
-                }
-                lastFile = data.file;
-                const percent = Math.min(100, ((numOfZipped / numOfFiles) * 100)).toFixed(2);
-                if (AppSettings.settings.console.tty) {
-                    ConsoleOutput.logLive(`Zipping...${percent}%`)
+            });
+
+            // good practice to catch warnings (ie stat failures and other non-blocking errors)
+            archive.on('warning', function (err) {
+                if (err.code === 'ENOENT') {
+                    // log warning
+                    console.log(err);
                 } else {
-                    ConsoleOutput.log(`Zipping...${percent}%`);
+                    // throw error
+                    reject(err);
                 }
             });
+
+            console.log(`set pw ${password}`);
+            // good practice to catch this error explicitly
+            archive.on('error', function (err) {
+                reject(err);
+            });
+
+            // pipe archive data to the file
+            archive.pipe(output);
+
+            console.log(`zip folder ${localPath}`);
+            archive.directory(localPath, '');
+            archive.finalize();
         });
     }
 }
