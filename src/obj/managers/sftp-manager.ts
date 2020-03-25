@@ -1,25 +1,22 @@
-import * as Path from "path";
-import * as node_ssh from "node-ssh";
+import * as Path from 'path';
+import * as node_ssh from 'node-ssh';
 import * as fs from 'fs-extra';
 
 import {AppSettings, Configuration} from '../../app-settings';
 import {ConsoleOutput} from '../console-output';
-import {ConnectionManager, ConnectionOptions, FileInfo} from "./connection-manager";
-import {SSH} from "../ssh";
+import {ConnectionManager, FileInfo} from './connection-manager';
+import {SSH} from '../ssh';
 
-export class SftpManager {
+export class SftpManager extends ConnectionManager {
     private _client: SSH;
 
     constructor(path: string, configuration: Configuration) {
-        // super(path, configuration);
+        super(path, configuration);
 
         // noinspection JSPotentiallyInvalidConstructorUsage
         this._client = new node_ssh();
-
-        // this._client.ftp.verbose = configuration.server.verbose;
     }
 
-    /*
     protected async connect() {
         try {
             this.logger.log(`connect via ${this.protocol}...`, 'info');
@@ -27,7 +24,7 @@ export class SftpManager {
                 host: this.connectionOptions.host,
                 username: this.connectionOptions.user,
                 password: this.connectionOptions.password,
-                privateKey: this.connectionOptions.privateKey
+                privateKey: this.connectionOptions.privateKeyPath
             });
             return true;
         } catch (e) {
@@ -36,12 +33,12 @@ export class SftpManager {
     }
 
     protected onConnectionFailed(error: any) {
-        console.log("ERROR!");
+        console.log('ERROR!');
         console.log(error);
     }
 
     public close() {
-        this._client.close();
+        this._client.dispose();
     }
 
     public async gotTo(path: string) {
@@ -67,6 +64,7 @@ export class SftpManager {
             }
         });
     }
+
 
     public async goUp() {
         return new Promise<void>((resolve, reject) => {
@@ -104,61 +102,6 @@ export class SftpManager {
         }
     }
 
-    /**
-     * returns the folder
-     * @deprecated
-     * @param path
-
-     public getFolder(path: string): Promise<FTPFolder> {
-        return new Promise<FTPFolder>((resolve, reject) => {
-            this.listEntries(path).then((list) => {
-                let name = path.substring(0, path.lastIndexOf('/'));
-                name = name.substring(name.lastIndexOf('/') + 1);
-
-                let result: FTPFolder = new FTPFolder(path, new FileInfo(name));
-                const folders: FTPFolder[] = [];
-
-                for (const entry of list) {
-                    if (entry.isFile) {
-                        result.addEntry(new FtpEntry(path + entry.name, entry));
-                    } else if (entry.isDirectory) {
-                        folders.push(new FTPFolder(path + entry.name + '/', entry));
-                    }
-                }
-
-                if (folders.length === 0) {
-                    resolve(result);
-                } else {
-                    let p = Promise.resolve(); // Q() in q
-
-                    let counter = 0;
-                    for (const folder of folders) {
-                        p = p.then(() => {
-                            return this.getFolder(folder.path).then((newFolder) => {
-                                newFolder.sortEntries();
-                                result.addEntry(newFolder);
-                                counter++;
-                                ConsoleOutput.log(`${folder.path} added, ${counter}/${folders.length}`);
-                            }).catch((error) => {
-                                folder.readable = false;
-                                result.addEntry(folder);
-                            });
-                        });
-                    }
-                    p.then(() => {
-                        result.sortEntries();
-                        resolve(result);
-                    }).catch(() => {
-                        reject(result);
-                    });
-                }
-            }).catch((error) => {
-                reject(error);
-            });
-        });
-    }
-     */
-/*
     public async downloadFolder(remotePath: string, downloadPath: string) {
         this.folderQueue.push({remotePath, downloadPath});
 
@@ -303,5 +246,4 @@ export class SftpManager {
             throw new Error('downloadPath does not exist');
         }
     }
-    */
 }

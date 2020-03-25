@@ -175,7 +175,7 @@ export interface ConnectionOptions {
     port: number;
     user: string;
     password: string;
-    privateKey?: string;
+    privateKeyPath?: string;
 }
 
 export interface FileInfo {
