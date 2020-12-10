@@ -4,6 +4,8 @@
    Easy to use backup script for web-spaces via ftp or ftps. Compatible to Windows, Linux and MacOS systems.<br/>
    <b>This project is still in development</b>
    <img src="doc/img/webspace_backup.gif"/>
+   
+   **Notice: If you want to backup your owncloud installation I recommend this way: https://github.com/julianpoemp/oc-backup**
 </p>
 
 ## Why?
