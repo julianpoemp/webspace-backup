@@ -25,20 +25,20 @@
   "homepage": "https://github.com/julianpoemp/webspace-backup#readme",
   "dependencies": {
     "archiver": "^3.1.1",
-    "archiver-zip-encryptable": "^1.0.6",
-    "basic-ftp": "^4.5.3",
+    "archiver-zip-encryptable": "^1.0.7",
+    "basic-ftp": "^4.6.3",
     "del": "^5.1.0",
     "fs-extra": "^8.1.0",
-    "moment": "^2.24.0",
+    "moment": "^2.29.1",
     "node-ssh": "^7.0.1",
     "os-locale": "^4.0.0",
-    "pkg": "^4.4.4",
+    "pkg": "^4.4.9",
     "prompt": "^1.0.0",
     "rimraf": "^3.0.2",
-    "rxjs": "^6.5.4",
+    "rxjs": "^6.6.3",
     "ssh2": "^0.8.9"
   },
   "devDependencies": {
-    "typescript": "^3.8.3"
+    "typescript": "^3.9.7"
   }
 }

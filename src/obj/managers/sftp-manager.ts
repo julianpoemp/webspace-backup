@@ -42,6 +42,7 @@ export class SftpManager extends ConnectionManager {
     }
 
     public async gotTo(path: string) {
+        /*
         return new Promise<void>((resolve, reject) => {
             if (this.isReady) {
                 this.logger.log(`open ${path}`, 'info');
@@ -63,10 +64,12 @@ export class SftpManager extends ConnectionManager {
                 reject(new Error(`FTPManager is not ready. gotTo ${path}`));
             }
         });
+         */
     }
 
 
     public async goUp() {
+        /*
         return new Promise<void>((resolve, reject) => {
             if (this.isReady) {
                 this._client.cdup().then(() => {
@@ -87,9 +90,13 @@ export class SftpManager extends ConnectionManager {
                 reject(new Error(`FTPManager is not ready.`));
             }
         });
+
+         */
     }
 
     public async listEntries(path: string): Promise<FileInfo[]> {
+        return null;
+        /*
         if (this.isReady) {
             try {
                 await this.gotTo(path);
@@ -100,9 +107,12 @@ export class SftpManager extends ConnectionManager {
         } else {
             throw new Error('FtpManager is not ready. list entries');
         }
+
+         */
     }
 
     public async downloadFolder(remotePath: string, downloadPath: string) {
+        /*
         this.folderQueue.push({remotePath, downloadPath});
 
         while (this.folderQueue.length > 0) {
@@ -116,9 +126,12 @@ export class SftpManager extends ConnectionManager {
                 this.logger.log(e.toString(), 'error', remotePath);
             }
         }
+
+         */
     }
 
     protected async _downloadFolder(remotePath: string, downloadPath: string) {
+        /*
         this.recursives++;
 
         if (this.recursives % 100 === 99) {
@@ -173,9 +186,11 @@ export class SftpManager extends ConnectionManager {
             this._logger.add(e.message, 'error', remotePath);
             throw e;
         }
+         */
     }
 
     protected async existsFolder(path: string) {
+        /*
         return new Promise<boolean>((resolve) => {
             fs.stat(path, (err) => {
                 if (err) {
@@ -185,9 +200,11 @@ export class SftpManager extends ConnectionManager {
                 }
             });
         });
+         */
     }
 
     public async downloadFile(path: string, downloadPath: string, fileInfo: FileInfo) {
+        /*
         this.recursives++;
 
         if (this.recursives % 100 === 99) {
@@ -245,5 +262,6 @@ export class SftpManager extends ConnectionManager {
         } else {
             throw new Error('downloadPath does not exist');
         }
+         */
     }
 }
